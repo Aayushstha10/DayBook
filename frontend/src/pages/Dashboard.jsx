@@ -18,7 +18,7 @@ export default function Dashboard() {
         </div>
       </div>
       <div>
-        <Transcation/>
+        <Transcation />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { ToastContainer, toast } from "react-toastify";
 
 export default function Register() {
   const [form, setForm] = useState({
@@ -32,25 +33,24 @@ export default function Register() {
     try {
       const response = await axios.post(
         "http://localhost:5000/api/signup",
-        form
+        form,
       );
 
       console.log(response.data);
 
-      alert("Registration Successful!");
+      toast.success("Registration Successful!");
 
       navigate("/");
     } catch (err) {
       console.log(err);
 
-      setError(
-        err.response?.data?.message || "Something went wrong."
-      );
+      setError(err.response?.data?.message || "Something went wrong.");
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-paper p-6">
+       <ToastContainer />
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <span className="font-display text-2xl font-semibold text-ink">
@@ -59,9 +59,7 @@ export default function Register() {
           <h1 className="font-display text-xl text-ink mt-4">
             Create your account
           </h1>
-          <p className="text-sm text-slate mt-1">
-            Takes less than a minute.
-          </p>
+          <p className="text-sm text-slate mt-1">Takes less than a minute.</p>
         </div>
 
         <form
@@ -69,9 +67,7 @@ export default function Register() {
           className="space-y-4 bg-white rounded-card border border-black/5 shadow-card p-6"
         >
           <label className="block">
-            <span className="text-xs font-medium text-slate">
-              Full name
-            </span>
+            <span className="text-xs font-medium text-slate">Full name</span>
             <input
               type="text"
               value={form.name}
@@ -81,9 +77,7 @@ export default function Register() {
           </label>
 
           <label className="block">
-            <span className="text-xs font-medium text-slate">
-              Email
-            </span>
+            <span className="text-xs font-medium text-slate">Email</span>
             <input
               type="email"
               value={form.email}
@@ -93,9 +87,7 @@ export default function Register() {
           </label>
 
           <label className="block">
-            <span className="text-xs font-medium text-slate">
-              Password
-            </span>
+            <span className="text-xs font-medium text-slate">Password</span>
 
             <div className="relative mt-1">
               <input
@@ -115,9 +107,7 @@ export default function Register() {
             </div>
           </label>
 
-          {error && (
-            <p className="text-red-500 text-sm">{error}</p>
-          )}
+          {error && <p className="text-red-500 text-sm">{error}</p>}
 
           <button type="submit" className="btn-primary w-full">
             Create Account
@@ -130,6 +120,7 @@ export default function Register() {
             Sign In
           </Link>
         </p>
+       
       </div>
     </div>
   );

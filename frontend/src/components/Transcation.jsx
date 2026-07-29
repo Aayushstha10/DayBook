@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { FiRefreshCw } from "react-icons/fi";
+import { ToastContainer, toast } from 'react-toastify';
 
 const Transaction = () => {
   const [search, setSearch] = useState("");
@@ -26,7 +27,7 @@ const Transaction = () => {
       setTransactions(res.data.expenses || []);
     } catch (error) {
       console.error(error);
-      alert("Failed to load transactions");
+      toast.error("Failed to load transactions");
     } finally {
       setLoading(false);
     }
@@ -61,6 +62,7 @@ const Transaction = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
+      <ToastContainer/>
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold">

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { ToastContainer, toast } from "react-toastify";
+import { GoogleLogin } from "@react-oauth/google";
 
 export default function Login() {
   const [form, setForm] = useState({
@@ -10,17 +12,22 @@ export default function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+
   const navigate = useNavigate();
 
   const handleChange = (field) => (e) => {
-    setForm({ ...form, [field]: e.target.value });
+    setForm({
+      ...form,
+      [field]: e.target.value,
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
 
     if (!form.email || !form.password) {
-      setError("Enter your email and password to continue.");
+      toast.error("Please enter your email and password.");
       return;
     }
 
@@ -30,28 +37,64 @@ export default function Login() {
         form,
       );
 
-      console.log(response.data);
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+
+      toast.success("Login Successful!");
+
+      // Wait for toast to appear before navigating
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1000);
+    } catch (err) {
+      const message =
+        err.response?.data?.message || "Invalid email or password.";
+
+      setError(message);
+      toast.error(message);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError("");
+
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/google",
+        { token: credentialResponse.credential },
+      );
 
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.user));
 
-      alert("Login Successful!");
+      toast.success("Login Successful!");
 
-      navigate("/dashboard");
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1000);
     } catch (err) {
-      console.error(err);
+      const message =
+        err.response?.data?.message || "Google sign-in failed.";
 
-      setError(err.response?.data?.message || "Invalid email or password.");
+      setError(message);
+      toast.error(message);
     }
+  };
+
+  const handleGoogleError = () => {
+    toast.error("Google sign-in failed.");
   };
 
   return (
     <div className="min-h-screen flex bg-ink">
+      <ToastContainer />
+
       <div className="hidden lg:flex flex-1 items-center justify-center p-12 bg-ink text-paper">
         <div className="max-w-sm">
           <p className="font-display text-3xl font-semibold leading-tight">
             Know where every dollar went, without the spreadsheet.
           </p>
+
           <p className="text-paper/60 mt-4 text-sm">
             Ledger keeps a running account of your spending so month-end never
             surprises you.
@@ -65,7 +108,9 @@ export default function Login() {
             <span className="font-display text-2xl font-semibold text-ink">
               Ledger
             </span>
+
             <h1 className="font-display text-xl text-ink mt-4">Welcome back</h1>
+
             <p className="text-sm text-slate mt-1">
               Sign in to see your dashboard.
             </p>
@@ -74,6 +119,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <label className="block">
               <span className="text-xs font-medium text-slate">Email</span>
+
               <input
                 type="email"
                 value={form.email}
@@ -111,6 +157,20 @@ export default function Login() {
               Sign In
             </button>
           </form>
+
+          <div className="flex items-center gap-3 my-6">
+            <div className="h-px flex-1 bg-ink/10" />
+            <span className="text-xs text-slate">or</span>
+            <div className="h-px flex-1 bg-ink/10" />
+          </div>
+
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              width="320"
+            />
+          </div>
 
           <p className="text-sm text-slate mt-6 text-center">
             New here?{" "}

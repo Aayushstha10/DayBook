@@ -7,6 +7,7 @@ const auth = require("./middleware/auth");
 const loginroute = require("./routes/login");
 const signuproute = require("./routes/signup");
 const expensesroute=require("./routes/expenses")
+const googleroute  = require("./routes/google");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 // public routes
 app.use("/api", signuproute);
 app.use("/api", loginroute);
+app.use("/api", googleroute);  
 app.use("/api",auth,expensesroute);
 
 

@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
-const validator=require("validator")
-
+const validator = require("validator");
 
 const userSchema = new mongoose.Schema(
   {
@@ -11,14 +10,26 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true, 
+      unique: true,
       lowercase: true,
-      validate: [validator.isEmail, "Invalid email address"]
-
+      validate: [validator.isEmail, "Invalid email address"],
     },
     password: {
       type: String,
-      required: true,
+      required: function () {
+        return this.authProvider !== "google";
+      },
+    },
+    authProvider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
+    },
+    googleId: {
+      type: String,
+    },
+    picture: {
+      type: String,
     },
   },
   {

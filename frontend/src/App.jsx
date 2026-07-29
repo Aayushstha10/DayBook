@@ -11,7 +11,10 @@ import Transaction from "./pages/Transaction.jsx"
 
 export default function App() {
   return (
+    <>
+    
     <Routes>
+       
       
       <Route path="/" element={<Navigate to="/login" replace />} />
 
@@ -33,5 +36,7 @@ export default function App() {
 
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </>
+    
   );
 }

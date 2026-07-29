@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-  import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer, toast } from "react-toastify";
 
 const AddExpense = ({ onAddExpense }) => {
   const navigate = useNavigate();
@@ -41,7 +41,7 @@ const AddExpense = ({ onAddExpense }) => {
     };
 
     try {
-        const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token");
       const response = await axios.post(
         "http://localhost:5000/api/expenses",
         newExpense,

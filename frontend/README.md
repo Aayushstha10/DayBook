@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Ledger — Expense Tracker UI
 
 A front-end-only expense tracker built with React, React Router, Tailwind CSS, and Recharts. Transaction data is seeded from `src/data/dummyData.js` and persisted to `localStorage` so edits survive a page refresh — there's no backend.
@@ -38,3 +39,6 @@ src/
 - Auth screens (`/login`, `/register`) are UI only — submitting just redirects to the dashboard.
 - "Export as CSV" and "Clear all data" on the Settings page are placeholders; wire them up to real logic when you add a backend.
 - Colors, type, and the receipt-style dashed row dividers are defined as design tokens in `tailwind.config.js` — change those instead of hardcoding hex values in components.
+=======
+currently this project is development phase..............
+>>>>>>> 20b36084e7f0667fc6796feb00e5e10671431571

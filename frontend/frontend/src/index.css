@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .input {
+    @apply w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink
+      focus:border-moss focus:ring-1 focus:ring-moss outline-none;
+  }
+  .btn-primary {
+    @apply bg-moss text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-moss-dark transition-colors;
+  }
+  .btn-ghost {
+    @apply text-sm font-medium px-4 py-2 rounded-lg text-slate hover:bg-paper transition-colors;
+  }
+  .btn-danger {
+    @apply bg-rust text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-rust-light transition-colors;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #F7F5F0;
+  color: #1B2430;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background-color: #C9A227;
+  color: #1B2430;
+}
+
+/* tabular figures everywhere money shows up */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* thin dashed row divider, receipt-like */
+.receipt-row {
+  border-bottom: 1px dashed #D8D3C6;
+}
+.receipt-row:last-child {
+  border-bottom: none;
+}
+
+:focus-visible {
+  outline: 2px solid #C9A227;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

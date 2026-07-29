@@ -19,14 +19,18 @@ export default function Profile() {
     <div className="max-w-xl space-y-6">
       <div className="bg-white rounded-card border border-black/5 shadow-card p-6">
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-full bg-moss text-white flex items-center justify-center font-display text-xl font-semibold">
-            {user?.name
-              ?.split(" ")
-              .map((word) => word.charAt(0))
-              .join("")
-              .slice(0, 2)
-              .toUpperCase()}
-          </div>
+          {user?.picture ? (
+            <img
+              src={user.picture}
+              alt={user?.name || "User"}
+              className="w-10 h-10 rounded-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center font-semibold uppercase">
+              {user?.name?.charAt(0) || "U"}
+            </div>
+          )}
           <div>
             <p className="font-display text-lg font-semibold text-ink">
               {user?.name}
