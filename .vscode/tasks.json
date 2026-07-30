@@ -1,0 +1,17 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "preview",
+			"path": "frontend",
+			"problemMatcher": [],
+			"label": "npm: preview - frontend",
+			"detail": "vite preview",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		}
+	]
+}

@@ -26,7 +26,7 @@ const login = async (req, res) => {
       messge: "login successfully",
       token,
       user: {
-        id:user._id,
+        id: user._id,
         name: user.name,
         email: user.email,
       },
@@ -37,4 +37,4 @@ const login = async (req, res) => {
   }
 };
 
-module.exports=login;
+module.exports = login;

@@ -73,8 +73,7 @@ export default function Login() {
         navigate("/dashboard");
       }, 1000);
     } catch (err) {
-      const message =
-        err.response?.data?.message || "Google sign-in failed.";
+      const message = err.response?.data?.message || "Google sign-in failed.";
 
       setError(message);
       toast.error(message);
@@ -92,12 +91,11 @@ export default function Login() {
       <div className="hidden lg:flex flex-1 items-center justify-center p-12 bg-ink text-paper">
         <div className="max-w-sm">
           <p className="font-display text-3xl font-semibold leading-tight">
-            Know where every dollar went, without the spreadsheet.
+            Track every rupee you spend, effortlessly.
           </p>
 
           <p className="text-paper/60 mt-4 text-sm">
-            Ledger keeps a running account of your spending so month-end never
-            surprises you.
+            Daybook keeps your expenses organized, helping you stay on top of your budget every day
           </p>
         </div>
       </div>
@@ -106,7 +104,7 @@ export default function Login() {
         <div className="w-full max-w-sm">
           <div className="mb-8">
             <span className="font-display text-2xl font-semibold text-ink">
-              Ledger
+              Daybook
             </span>
 
             <h1 className="font-display text-xl text-ink mt-4">Welcome back</h1>
