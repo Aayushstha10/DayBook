@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://day-book-eta.vercel.app/login"
+  "https://day-book-eta.vercel.app"
 ];
 
 app.use(cors({
