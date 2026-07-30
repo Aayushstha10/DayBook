@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 
 const AddExpense = ({ onAddExpense }) => {
   const navigate = useNavigate();
@@ -42,6 +42,7 @@ const AddExpense = ({ onAddExpense }) => {
 
     try {
       const token = localStorage.getItem("token");
+
       const response = await axios.post(
         "https://daybook-j903.onrender.com/api/expenses",
         newExpense,
@@ -49,14 +50,10 @@ const AddExpense = ({ onAddExpense }) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
 
-      console.log(response.data);
-
       onAddExpense?.(response.data);
-
-      toast.success("Expense created successfully");
 
       setExpense({
         title: "",
@@ -67,10 +64,14 @@ const AddExpense = ({ onAddExpense }) => {
 
       setShowForm(false);
 
-      navigate("/dashboard");
+      toast.success("Expense created successfully", {
+        autoClose: 1000,
+        onClose: () => navigate("/dashboard"),
+      });
     } catch (error) {
       console.error(error.response?.data || error.message);
-      toast("Failed to create expense");
+
+      toast.error("Failed to create expense");
     }
   };
 
@@ -88,7 +89,9 @@ const AddExpense = ({ onAddExpense }) => {
       {showForm && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6">
-            <h2 className="text-2xl font-bold text-center mb-6">Add Expense</h2>
+            <h2 className="text-2xl font-bold text-center mb-6">
+              Add Expense
+            </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <input
@@ -152,7 +155,6 @@ const AddExpense = ({ onAddExpense }) => {
           </div>
         </div>
       )}
-      <ToastContainer />
     </div>
   );
 };
