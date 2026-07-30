@@ -3,7 +3,7 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const API = "http://localhost:5000/api/expenses";
+const API = "https://daybook-j903.onrender.com/api/expenses";
 
 export default function Transactions() {
   const [expenses, setExpenses] = useState([]);

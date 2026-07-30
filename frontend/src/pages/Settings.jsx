@@ -30,7 +30,7 @@ const defaultSettings = [
   },
 ];
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = "https://daybook-j903.onrender.com/api";
 
 export default function Settings() {
   const [settings, setSettings] = useState(() => {

@@ -60,7 +60,7 @@ export default function Login() {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/google",
+        "https://daybook-j903.onrender.com/api/auth/google",
         { token: credentialResponse.credential },
       );
 
