@@ -22,77 +22,58 @@ const AddExpense = ({ onAddExpense }) => {
     });
   };
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  if (
-    !expense.title.trim() ||
-    !expense.amount ||
-    !expense.category ||
-    !expense.date
-  ) {
-    toast.error("Please fill all fields.");
-    return;
-  }
+    if (
+      !expense.title ||
+      !expense.amount ||
+      !expense.category ||
+      !expense.date
+    ) {
+      toast.error("Please fill all fields.");
+      return;
+    }
 
-  // Title validation
-  const titleRegex = /^[A-Za-z0-9 ]{3,}$/;
+    const newExpense = {
+      ...expense,
+      amount: Number(expense.amount),
+    };
 
-  if (!titleRegex.test(expense.title.trim())) {
-    toast.error(
-      "Title must be at least 3 characters and contain only letters, numbers, and spaces."
-    );
-    return;
-  }
+    try {
+      const token = localStorage.getItem("token");
 
-  // Date validation
-  const selectedDate = new Date(expense.date);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+      const response = await axios.post(
+        "https://daybook-j903.onrender.com/api/expenses",
+        newExpense,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-  if (selectedDate > today) {
-    toast.error("Date cannot be in the future.");
-    return;
-  }
+      onAddExpense?.(response.data);
 
-  const newExpense = {
-    ...expense,
-    amount: Number(expense.amount),
+      setExpense({
+        title: "",
+        amount: "",
+        category: "",
+        date: "",
+      });
+
+      setShowForm(false);
+
+      toast.success("Expense created successfully", {
+        autoClose: 1000,
+        onClose: () => navigate("/dashboard"),
+      });
+    } catch (error) {
+      console.error(error.response?.data || error.message);
+
+      toast.error("Failed to create expense");
+    }
   };
-
-  try {
-    const token = localStorage.getItem("token");
-
-    const response = await axios.post(
-      "https://daybook-j903.onrender.com/api/expenses",
-      newExpense,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    onAddExpense?.(response.data);
-
-    setExpense({
-      title: "",
-      amount: "",
-      category: "",
-      date: "",
-    });
-
-    setShowForm(false);
-
-    toast.success("Expense created successfully", {
-      autoClose: 1000,
-      onClose: () => navigate("/dashboard"),
-    });
-  } catch (error) {
-    console.error(error.response?.data || error.message);
-    toast.error("Failed to create expense");
-  }
-};
 
   return (
     <div>
