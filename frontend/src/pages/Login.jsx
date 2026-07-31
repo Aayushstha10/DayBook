@@ -42,7 +42,6 @@ export default function Login() {
 
       toast.success("Login Successful!");
 
-      // Wait for toast to appear before navigating
       setTimeout(() => {
         navigate("/dashboard");
       }, 1000);
@@ -95,7 +94,8 @@ export default function Login() {
           </p>
 
           <p className="text-paper/60 mt-4 text-sm">
-            Daybook keeps your expenses organized, helping you stay on top of your budget every day
+            Daybook keeps your expenses organized, helping you stay on top of
+            your budget every day
           </p>
         </div>
       </div>

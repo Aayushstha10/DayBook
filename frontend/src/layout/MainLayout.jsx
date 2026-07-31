@@ -17,6 +17,10 @@ const titles = {
     title: "Profile",
     subtitle: "Your account details.",
   },
+  "/room": {
+    title: "Room",
+    subtitle: "all user expenses",
+  },
   "/settings": {
     title: "Settings",
     subtitle: "Preferences for how Ledger behaves.",

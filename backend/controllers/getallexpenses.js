@@ -2,7 +2,7 @@ const Expense = require("../models/Expenses");
 
 const getallexpenses = async (req, res) => {
   try {
-const expenses = await Expense.find().populate("user");
+const expenses = await Expense.find().populate("user","user.email");
 
     res.status(200).json({
       success: true,
