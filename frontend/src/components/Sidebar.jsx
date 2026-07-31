@@ -4,6 +4,7 @@ const links = [
   { to: "/dashboard", label: "Dashboard", icon: LedgerIcon },
   { to: "/transaction", label: "Transactions", icon: ListIcon },
   { to: "/profile", label: "Profile", icon: UserIcon },
+  { to: "/room", label: "Room", icon: RoomIcon },
   { to: "/settings", label: "Settings", icon: GearIcon },
 ];
 
@@ -17,19 +18,21 @@ export default function Sidebar({ open, onClose }) {
           aria-hidden="true"
         />
       )}
+
       <aside
-        className={`fixed z-40 inset-y-0 left-0 w-64 bg-ink text-paper flex flex-col
-          transform transition-transform duration-200 md:translate-x-0 md:static md:flex
-          ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-ink text-paper flex flex-col
+        transform transition-transform duration-200
+        md:translate-x-0 md:static
+        ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="px-6 py-6 border-b border-white/10">
           <div className="flex items-baseline gap-2">
             <span className="font-display text-2xl font-semibold tracking-tight">
-              {/* Ledger */}
               Daybook
             </span>
             <span className="text-gold text-xs font-mono">v1</span>
           </div>
+
           <p className="text-slate-light text-xs mt-1">
             Every Nepali Rupees, Accounted for.
           </p>
@@ -43,12 +46,15 @@ export default function Sidebar({ open, onClose }) {
               end={to === "/"}
               onClick={onClose}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                ${isActive ? "bg-moss text-white" : "text-paper/80 hover:bg-white/5 hover:text-white"}`
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                  isActive
+                    ? "bg-moss text-white"
+                    : "text-paper/80 hover:bg-white/5 hover:text-white"
+                }`
               }
             >
               <Icon className="w-4 h-4 shrink-0" />
-              {label}
+              <span>{label}</span>
             </NavLink>
           ))}
         </nav>
@@ -63,6 +69,7 @@ export default function Sidebar({ open, onClose }) {
   );
 }
 
+// Dashboard
 function LedgerIcon(props) {
   return (
     <svg
@@ -77,6 +84,8 @@ function LedgerIcon(props) {
     </svg>
   );
 }
+
+// Transactions
 function ListIcon(props) {
   return (
     <svg
@@ -90,19 +99,8 @@ function ListIcon(props) {
     </svg>
   );
 }
-function ChartIcon(props) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      {...props}
-    >
-      <path d="M4 20V10M12 20V4M20 20v-7" strokeLinecap="round" />
-    </svg>
-  );
-}
+
+// Profile
 function UserIcon(props) {
   return (
     <svg
@@ -120,6 +118,26 @@ function UserIcon(props) {
     </svg>
   );
 }
+
+// Room
+function RoomIcon(props) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      {...props}
+    >
+      <path d="M4 20V7a2 2 0 012-2h12a2 2 0 012 2v13" />
+      <path d="M4 20h16" strokeLinecap="round" />
+      <path d="M9 11h6v9H9z" />
+      <circle cx="14" cy="15.5" r="0.4" fill="currentColor" />
+    </svg>
+  );
+}
+
+// Settings
 function GearIcon(props) {
   return (
     <svg

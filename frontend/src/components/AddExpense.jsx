@@ -15,6 +15,8 @@ const AddExpense = ({ onAddExpense }) => {
     date: "",
   });
 
+  const [error, setError] = useState("");
+
   const handleChange = (e) => {
     setExpense({
       ...expense,
@@ -25,12 +27,13 @@ const AddExpense = ({ onAddExpense }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (
-      !expense.title ||
-      !expense.amount ||
-      !expense.category ||
-      !expense.date
-    ) {
+    if (!expense.title) {
+      toast.error("enter valid title");
+    }
+    if (!expense.date) {
+      toast.error("enter valid date");
+    }
+    if (!expense.amount || !expense.category) {
       toast.error("Please fill all fields.");
       return;
     }
@@ -50,7 +53,7 @@ const AddExpense = ({ onAddExpense }) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       onAddExpense?.(response.data);
@@ -89,9 +92,7 @@ const AddExpense = ({ onAddExpense }) => {
       {showForm && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6">
-            <h2 className="text-2xl font-bold text-center mb-6">
-              Add Expense
-            </h2>
+            <h2 className="text-2xl font-bold text-center mb-6">Add Expense</h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <input
@@ -101,6 +102,10 @@ const AddExpense = ({ onAddExpense }) => {
                 value={expense.title}
                 onChange={handleChange}
                 className="w-full border rounded-lg px-4 py-2"
+                minLength={2}
+                maxLength={50}
+                pattern="[A-Za-z0-9 ]+"
+                title="Title can only contain letters, numbers, and spaces"
               />
 
               <input
@@ -133,6 +138,11 @@ const AddExpense = ({ onAddExpense }) => {
                 value={expense.date}
                 onChange={handleChange}
                 className="w-full border rounded-lg px-4 py-2"
+                max={
+                  new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+                    .toISOString()
+                    .split("T")[0]
+                }
               />
 
               <div className="flex justify-end gap-3">

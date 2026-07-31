@@ -26,12 +26,7 @@ const expensesSchema = new mongoose.Schema(
     date: {
       type: Date,
       required: [true, "Date is required"],
-      validate: {
-        validator: function (value) {
-          return !isNaN(new Date(value).getTime());
-        },
-        message: "Please enter a valid date",
-      },
+      max: [Date.now, "Future dates are not allowed"],
     },
 
     user: {

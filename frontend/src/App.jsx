@@ -7,36 +7,35 @@ import Profile from "./pages/Profile.jsx";
 import Settings from "./pages/Settings.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import ProtectedRoute from "./pages/ProtectedRoute.jsx";
-import Transaction from "./pages/Transaction.jsx"
+import Transaction from "./pages/Transaction.jsx";
+import Room from "./pages/Room.jsx";
 
 export default function App() {
   return (
     <>
-    
-    <Routes>
-       
-      
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
 
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/room" element={<Room />} />
 
-<Route
-  element={
-    <ProtectedRoute>
-      <MainLayout />
-    </ProtectedRoute>
-  }
->
-  <Route path="/dashboard" element={<Dashboard />} />
-  <Route path="/transaction" element={<Transaction />} />
-  <Route path="/profile" element={<Profile />} />
-  <Route path="/settings" element={<Settings />} />
-</Route>
+        <Route
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/transaction" element={<Transaction />} />
+          <Route path="/profile" element={<Profile />} />
 
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+          <Route path="/settings" element={<Settings />} />
+        </Route>
+
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </>
-    
   );
 }

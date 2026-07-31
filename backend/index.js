@@ -8,6 +8,8 @@ const loginroute = require("./routes/login");
 const signuproute = require("./routes/signup");
 const expensesroute=require("./routes/expenses")
 const googleroute  = require("./routes/google");
+const allexpenses=require("./routes/getallexpenses")
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,6 +31,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api", signuproute);
 app.use("/api", loginroute);
 app.use("/api", googleroute);  
+app.use("/api",allexpenses)
 app.use("/api",auth,expensesroute);
 
 
