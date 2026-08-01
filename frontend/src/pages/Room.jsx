@@ -36,7 +36,7 @@ export default function ExpenseSummary() {
     setError(null);
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/allexpenses", {
+      const res = await axios.get("https://daybook-j903.onrender.com/api/allexpenses", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setExpenses(Array.isArray(res.data) ? res.data : []);
