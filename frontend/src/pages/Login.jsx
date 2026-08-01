@@ -36,9 +36,9 @@ export default function Login() {
         "https://daybook-j903.onrender.com/api/login",
         form,
       );
-
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.user));
+      localStorage.setItem("role", response.data.user.role);
 
       toast.success("Login Successful!");
 
@@ -54,30 +54,36 @@ export default function Login() {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    setError("");
+ const handleGoogleSuccess = async (credentialResponse) => {
+  setError("");
 
-    try {
-      const response = await axios.post(
-        "https://daybook-j903.onrender.com/api/auth/google",
-        { token: credentialResponse.credential },
-      );
+  try {
+    const response = await axios.post(
+      "https://daybook-j903.onrender.com/api/auth/google",
+      {
+        token: credentialResponse.credential,
+      }
+    );
 
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+    console.log("Google Login Response:", response.data);
 
-      toast.success("Login Successful!");
+    localStorage.setItem("token", response.data.token);
+    localStorage.setItem("user", JSON.stringify(response.data.user));
+    localStorage.setItem("role", response.data.user.role);
 
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 1000);
-    } catch (err) {
-      const message = err.response?.data?.message || "Google sign-in failed.";
+    toast.success("Login Successful!");
 
-      setError(message);
-      toast.error(message);
-    }
-  };
+    setTimeout(() => {
+      navigate("/dashboard");
+    }, 1000);
+  } catch (err) {
+    const message =
+      err.response?.data?.message || "Google sign-in failed.";
+
+    setError(message);
+    toast.error(message);
+  }
+};
 
   const handleGoogleError = () => {
     toast.error("Google sign-in failed.");

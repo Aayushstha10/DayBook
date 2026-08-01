@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound.jsx";
 import ProtectedRoute from "./pages/ProtectedRoute.jsx";
 import Transaction from "./pages/Transaction.jsx";
 import Room from "./pages/Room.jsx";
+import AdminRoute from "./pages/AdminRoute.jsx";
 
 export default function App() {
   return (
@@ -17,7 +18,6 @@ export default function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/room" element={<Room />} />
 
         <Route
           element={
@@ -29,6 +29,14 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/transaction" element={<Transaction />} />
           <Route path="/profile" element={<Profile />} />
+          <Route
+            path="/room"
+            element={
+              <AdminRoute>
+                <Room />
+              </AdminRoute>
+            }
+          />
           <Route path="/settings" element={<Settings />} />
         </Route>
 

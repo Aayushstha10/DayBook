@@ -1,20 +1,20 @@
 const Expense = require("../models/Expenses");
 
-const getallexpenses = async (req, res) => {
-  try {
-const expenses = await Expense.find().populate("user","user.email");
+exports.getallexpenses = async (req, res) => {
 
-    res.status(200).json({
-      success: true,
-      expenses,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
-  }
+    try {
+
+        const expenses = await Expense.find()
+            .populate("user", "username email");
+
+        res.json(expenses);
+
+    } catch (err) {
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+
 };
-
-module.exports = getallexpenses;

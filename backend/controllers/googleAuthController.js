@@ -16,38 +16,60 @@ exports.googleLogin = async (req, res) => {
     const payload = ticket.getPayload();
     const { email, name, picture, sub: googleId } = payload;
 
+    // Assign role based on email
+    const role =
+      email === "aayushshrestha003@gmail.com" ? "admin" : "user";
+
     let user = await User.findOne({ email });
 
     if (!user) {
+      // Create new Google user
       user = await User.create({
         name,
         email,
         picture,
         googleId,
         authProvider: "google",
+        role,
       });
-    } else if (!user.googleId) {
+    } else {
+      // Update existing user
       user.googleId = googleId;
+      user.picture = picture;
+      user.role = role;
+
       await user.save();
     }
 
+    // Create JWT
     const authToken = jwt.sign(
-      { id: user._id, email: user.email },
+      {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+      },
       process.env.secret,
-      { expiresIn: "7d" },
+      {
+        expiresIn: "7d",
+      }
     );
 
+    // Send response
     res.status(200).json({
+      message: "Google login successful",
       token: authToken,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
         picture: user.picture,
+        role: user.role,
       },
     });
   } catch (err) {
     console.error(err);
-    res.status(401).json({ message: "Google authentication failed" });
+    res.status(401).json({
+      message: "Google authentication failed",
+    });
   }
 };

@@ -6,10 +6,9 @@ const cors = require("cors");
 const auth = require("./middleware/auth");
 const loginroute = require("./routes/login");
 const signuproute = require("./routes/signup");
-const expensesroute=require("./routes/expenses")
-const googleroute  = require("./routes/google");
-const allexpenses=require("./routes/getallexpenses")
-
+const expensesroute = require("./routes/expenses");
+const googleroute = require("./routes/google");
+const admin = require("./routes/admin");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -17,23 +16,24 @@ const PORT = process.env.PORT || 5000;
 const allowedOrigins = [
   "http://localhost:5174",
   "http://localhost:5173",
-  "https://day-book-eta.vercel.app"
+  "https://day-book-eta.vercel.app",
 ];
 
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // public routes
 app.use("/api", signuproute);
 app.use("/api", loginroute);
-app.use("/api", googleroute);  
-app.use("/api",allexpenses)
-app.use("/api",auth,expensesroute);
-
+app.use("/api", googleroute);
+app.use("/api", admin);
+app.use("/api", auth, expensesroute);
 
 console.log("URI:", process.env.mongodb);
 
