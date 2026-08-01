@@ -50,7 +50,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-paper p-6">
-       <ToastContainer />
+      <ToastContainer />
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <span className="font-display text-2xl font-semibold text-ink">
@@ -120,7 +120,6 @@ export default function Register() {
             Sign In
           </Link>
         </p>
-       
       </div>
     </div>
   );

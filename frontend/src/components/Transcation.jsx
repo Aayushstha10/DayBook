@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { FiRefreshCw } from "react-icons/fi";
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer, toast } from "react-toastify";
 
 const Transaction = () => {
   const [search, setSearch] = useState("");
@@ -18,11 +18,14 @@ const Transaction = () => {
 
       const token = localStorage.getItem("token");
 
-      const res = await axios.get("https://daybook-j903.onrender.com/api/expenses", {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const res = await axios.get(
+        "https://daybook-j903.onrender.com/api/expenses",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
 
       setTransactions(res.data.expenses || []);
     } catch (error) {
@@ -47,7 +50,7 @@ const Transaction = () => {
 
   const totalExpense = filteredTransactions.reduce(
     (sum, item) => sum + Number(item.amount),
-    0
+    0,
   );
 
   const average =
@@ -62,12 +65,10 @@ const Transaction = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
-      <ToastContainer/>
+      <ToastContainer />
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">
-          My Transactions
-        </h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">My Transactions</h1>
 
         <button
           onClick={getExpenses}
@@ -123,9 +124,7 @@ const Transaction = () => {
       {/* Transactions Table */}
       <div className="bg-white rounded-xl shadow overflow-hidden">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 p-5 border-b">
-          <h2 className="text-lg sm:text-xl font-bold">
-            Recent Transactions
-          </h2>
+          <h2 className="text-lg sm:text-xl font-bold">Recent Transactions</h2>
 
           <span className="text-gray-500 text-sm">
             {filteredTransactions.length} Records

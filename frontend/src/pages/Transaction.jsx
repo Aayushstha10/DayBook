@@ -33,7 +33,6 @@ export default function Transactions() {
     }
   };
 
-  // Delete Expense
   const deleteExpense = async (id) => {
     try {
       const token = localStorage.getItem("token");
@@ -53,7 +52,6 @@ export default function Transactions() {
     }
   };
 
-  // Update Expense
   const updateExpense = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -66,8 +64,8 @@ export default function Transactions() {
 
       setExpenses((prev) =>
         prev.map((item) =>
-          item._id === editExpense._id ? res.data.expense : item
-        )
+          item._id === editExpense._id ? res.data.expense : item,
+        ),
       );
 
       toast.success("Expense updated successfully");
@@ -85,7 +83,6 @@ export default function Transactions() {
     );
   });
 
-  // Reusable icon button
   const IconBtn = ({ onClick, color, label, children }) => (
     <button
       onClick={onClick}
@@ -110,7 +107,6 @@ export default function Transactions() {
         />
       </div>
 
-      {/* Desktop / tablet table view */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-100">
@@ -166,7 +162,6 @@ export default function Transactions() {
         </table>
       </div>
 
-      {/* Mobile card view */}
       <div className="md:hidden space-y-3">
         {filtered.map((item) => (
           <div
@@ -215,11 +210,12 @@ export default function Transactions() {
         ))}
 
         {filtered.length === 0 && (
-          <p className="text-center text-gray-500 py-6">No transactions found</p>
+          <p className="text-center text-gray-500 py-6">
+            No transactions found
+          </p>
         )}
       </div>
 
-      {/* View Modal */}
       {selectedExpense && (
         <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm relative">
@@ -257,7 +253,6 @@ export default function Transactions() {
         </div>
       )}
 
-      {/* Edit Modal */}
       {editExpense && (
         <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm relative">
@@ -336,7 +331,6 @@ export default function Transactions() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteId && (
         <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-xs shadow-lg">

@@ -10,6 +10,7 @@ const getRoomExpenses = require("../controllers/getallexpenses");
 router.post("/expenses", createExpense);
 
 router.get("/expenses", getExpenses);
+router.get("/allexpenses",getRoomExpenses);
 
 router.put("/expenses/:id", updateExpense);
 

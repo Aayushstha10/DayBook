@@ -54,36 +54,35 @@ export default function Login() {
     }
   };
 
- const handleGoogleSuccess = async (credentialResponse) => {
-  setError("");
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError("");
 
-  try {
-    const response = await axios.post(
-      "https://daybook-j903.onrender.com/api/auth/google",
-      {
-        token: credentialResponse.credential,
-      }
-    );
+    try {
+      const response = await axios.post(
+        "https://daybook-j903.onrender.com/api/auth/google",
+        {
+          token: credentialResponse.credential,
+        },
+      );
 
-    console.log("Google Login Response:", response.data);
+      console.log("Google Login Response:", response.data);
 
-    localStorage.setItem("token", response.data.token);
-    localStorage.setItem("user", JSON.stringify(response.data.user));
-    localStorage.setItem("role", response.data.user.role);
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+      localStorage.setItem("role", response.data.user.role);
 
-    toast.success("Login Successful!");
+      toast.success("Login Successful!");
 
-    setTimeout(() => {
-      navigate("/dashboard");
-    }, 1000);
-  } catch (err) {
-    const message =
-      err.response?.data?.message || "Google sign-in failed.";
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1000);
+    } catch (err) {
+      const message = err.response?.data?.message || "Google sign-in failed.";
 
-    setError(message);
-    toast.error(message);
-  }
-};
+      setError(message);
+      toast.error(message);
+    }
+  };
 
   const handleGoogleError = () => {
     toast.error("Google sign-in failed.");

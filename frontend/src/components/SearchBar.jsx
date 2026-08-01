@@ -1,4 +1,8 @@
-export default function SearchBar({ value, onChange, placeholder = 'Search transactions…' }) {
+export default function SearchBar({
+  value,
+  onChange,
+  placeholder = "Search transactions…",
+}) {
   return (
     <div className="relative flex-1 min-w-[200px]">
       <svg
@@ -20,5 +24,5 @@ export default function SearchBar({ value, onChange, placeholder = 'Search trans
           placeholder:text-slate-light focus:border-moss focus:ring-1 focus:ring-moss outline-none"
       />
     </div>
-  )
+  );
 }

@@ -195,7 +195,11 @@ export default function Settings() {
               <p className="text-sm font-medium text-ink">{s.label}</p>
               <p className="text-xs text-slate mt-0.5">{s.description}</p>
             </div>
-            <Toggle checked={s.enabled} onChange={() => toggle(s.id)} label={s.label} />
+            <Toggle
+              checked={s.enabled}
+              onChange={() => toggle(s.id)}
+              label={s.label}
+            />
           </div>
         ))}
       </div>
@@ -206,7 +210,9 @@ export default function Settings() {
           {loading
             ? "Loading your transactions..."
             : `Download everything as a CSV file${
-                transactions.length > 0 ? ` (${transactions.length} transactions)` : ""
+                transactions.length > 0
+                  ? ` (${transactions.length} transactions)`
+                  : ""
               }.`}
         </p>
         <button
