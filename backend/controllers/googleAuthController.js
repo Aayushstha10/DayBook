@@ -15,9 +15,8 @@ exports.googleLogin = async (req, res) => {
 
     const payload = ticket.getPayload();
     const { email, name, picture, sub: googleId } = payload;
-    const role= email.toLowerCase()==="aayushshrestha003@gmail.com" ? "admin":"user";
-
-    
+    const role =
+      email.toLowerCase() === "aayushshrestha003@gmail.com" ? "admin" : "user";
 
     let user = await User.findOne({ email });
 
@@ -36,7 +35,7 @@ exports.googleLogin = async (req, res) => {
     }
 
     const authToken = jwt.sign(
-      { id: user._id, email: user.email },
+      { id: user._id, email: user.email, role: user.role },
       process.env.secret,
       { expiresIn: "7d" },
     );
@@ -48,6 +47,7 @@ exports.googleLogin = async (req, res) => {
         name: user.name,
         email: user.email,
         picture: user.picture,
+        role: user.role,
       },
     });
   } catch (err) {
