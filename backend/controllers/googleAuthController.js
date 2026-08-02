@@ -14,9 +14,10 @@ exports.googleLogin = async (req, res) => {
     });
 
     const payload = ticket.getPayload();
+
     const { email, name, picture, sub: googleId } = payload;
-    const role =
-      email.toLowerCase() === "aayushshrestha003@gmail.com" ? "admin" : "user";
+
+    const ADMIN_EMAIL = "aayushshrestha003@gmail.com";
 
     let user = await User.findOne({ email });
 
@@ -27,17 +28,37 @@ exports.googleLogin = async (req, res) => {
         picture,
         googleId,
         authProvider: "google",
-        role,
+        role:
+          email.toLowerCase() === ADMIN_EMAIL.toLowerCase()
+            ? "admin"
+            : "user",
       });
-    } else if (!user.googleId) {
-      user.googleId = googleId;
+    } else {
+      if (!user.googleId) {
+        user.googleId = googleId;
+      }
+
+      user.name = name;
+      user.picture = picture;
+
+      // Automatically promote the admin email
+      if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+        user.role = "admin";
+      }
+
       await user.save();
     }
 
     const authToken = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
+      {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+      },
       process.env.secret,
-      { expiresIn: "7d" },
+      {
+        expiresIn: "7d",
+      }
     );
 
     res.status(200).json({
@@ -52,6 +73,8 @@ exports.googleLogin = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(401).json({ message: "Google authentication failed" });
+    res.status(401).json({
+      message: "Google authentication failed",
+    });
   }
 };
