@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { Search, Receipt, AlertCircle, ChevronDown } from "lucide-react";
-
-/**
- * ExpenseSummary
- * Groups raw expense records by user (email), shows each person's
- * total number of entries and total amount, and lets you expand a
- * card to see the individual expenses. Tailwind only, responsive
- * from mobile up.
- */
+import {
+  Search,
+  Receipt,
+  AlertCircle,
+  ChevronDown,
+} from "lucide-react";
 
 function formatAmount(n) {
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return Number(n).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function initials(name) {
@@ -23,176 +23,218 @@ function initials(name) {
 export default function ExpenseSummary() {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
   const [query, setQuery] = useState("");
-  const [expanded, setExpanded] = useState(() => new Set());
+  const [expanded, setExpanded] = useState(new Set());
 
   useEffect(() => {
     fetchExpenses();
   }, []);
 
   const fetchExpenses = async () => {
-    setLoading(true);
-    setError(null);
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get("https://daybook-j903.onrender.com/api/allexpenses", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setExpenses(Array.isArray(res.data) ? res.data : []);
+      setLoading(true);
+      setError("");
+
+      const res = await axios.get(
+        "https://daybook-j903.onrender.com/api/allexpenses"
+      );
+
+      console.log("API Response:", res.data);
+
+      if (Array.isArray(res.data)) {
+        setExpenses(res.data);
+      } else if (Array.isArray(res.data.expenses)) {
+        setExpenses(res.data.expenses);
+      } else {
+        setExpenses([]);
+      }
     } catch (err) {
-      setError("Couldn't load expenses. Check the connection and try again.");
+      console.error(err);
+      setError("Couldn't load expenses.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Group by user email -> { name, email, count, total, items: [] }
   const summaries = useMemo(() => {
-    const byEmail = new Map();
+    const map = new Map();
 
-    for (const exp of expenses) {
-      const email = exp.user?.email || "unknown@no-email";
-      const name = exp.user?.name || "Unknown user";
+    expenses.forEach((exp) => {
+      const email = exp.user?.email || "unknown";
+      const name = exp.user?.name || "Unknown User";
       const amount = Number(exp.amount) || 0;
 
-      if (!byEmail.has(email)) {
-        byEmail.set(email, { name, email, count: 0, total: 0, items: [] });
+      if (!map.has(email)) {
+        map.set(email, {
+          name,
+          email,
+          count: 0,
+          total: 0,
+          items: [],
+        });
       }
-      const entry = byEmail.get(email);
-      entry.count += 1;
-      entry.total += amount;
-      entry.items.push(exp);
-    }
 
-    return Array.from(byEmail.values()).sort((a, b) => b.total - a.total);
+      const item = map.get(email);
+      item.count++;
+      item.total += amount;
+      item.items.push(exp);
+    });
+
+    return [...map.values()].sort((a, b) => b.total - a.total);
   }, [expenses]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return summaries;
+    if (!query.trim()) return summaries;
+
     return summaries.filter(
-      (s) => s.name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q)
+      (user) =>
+        user.name.toLowerCase().includes(query.toLowerCase()) ||
+        user.email.toLowerCase().includes(query.toLowerCase())
     );
-  }, [summaries, query]);
+  }, [query, summaries]);
 
   const toggleExpanded = (email) => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(email)) next.delete(email);
-      else next.add(email);
+
+      if (next.has(email)) {
+        next.delete(email);
+      } else {
+        next.add(email);
+      }
+
       return next;
     });
   };
 
   return (
-    <div className="min-h-full bg-slate-50 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6 pb-5 border-b border-slate-200">
+    <div className="min-h-screen bg-slate-100 p-6">
+      <div className="max-w-6xl mx-auto">
+
+        <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Expense Summary</h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <h1 className="text-3xl font-bold">Expense Summary</h1>
+            <p className="text-gray-500">
               {loading
-                ? "Loading…"
-                : `${summaries.length} ${summaries.length === 1 ? "person" : "people"}`}
+                ? "Loading..."
+                : `${summaries.length} ${
+                    summaries.length === 1 ? "Person" : "People"
+                  }`}
             </p>
           </div>
 
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+
             <input
-              type="text"
-              placeholder="Search name or email"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              placeholder="Search user..."
+              className="pl-10 pr-3 py-2 border rounded-lg w-full md:w-72"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-          {loading &&
-            Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-28 rounded-xl border border-slate-200 bg-white animate-pulse"
-              />
-            ))}
+        {loading && (
+          <div className="text-center py-10 text-gray-500">
+            Loading...
+          </div>
+        )}
 
-          {!loading && error && (
-            <div className="col-span-full flex flex-col items-center justify-center gap-2 py-16 text-center rounded-xl border border-dashed border-slate-300 bg-white">
-              <AlertCircle className="w-6 h-6 text-red-500" />
-              <p className="text-sm text-slate-500">{error}</p>
-            </div>
-          )}
+        {!loading && error && (
+          <div className="text-center py-10">
+            <AlertCircle className="mx-auto text-red-500" />
+            <p>{error}</p>
+          </div>
+        )}
 
-          {!loading && !error && filtered.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center gap-2 py-16 text-center rounded-xl border border-dashed border-slate-300 bg-white">
-              <Receipt className="w-6 h-6 text-blue-500" />
-              <p className="text-sm text-slate-500">No expenses match yet.</p>
-            </div>
-          )}
+        {!loading && !error && filtered.length === 0 && (
+          <div className="text-center py-10">
+            <Receipt className="mx-auto text-blue-500" />
+            <p>No expenses found.</p>
+          </div>
+        )}
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
 
           {!loading &&
             !error &&
-            filtered.map((s) => {
-              const isOpen = expanded.has(s.email);
+            filtered.map((user) => {
+              const open = expanded.has(user.email);
+
               return (
                 <div
-                  key={s.email}
-                  className="rounded-xl border border-slate-200 bg-white p-5 flex flex-col gap-4"
+                  key={user.email}
+                  className="bg-white rounded-xl shadow p-5"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex-none w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-semibold text-sm flex items-center justify-center">
-                      {initials(s.name)}
+                    <div className="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-700">
+                      {initials(user.name)}
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-900 truncate">{s.name}</p>
-                      <p className="text-xs text-slate-500 truncate">{s.email}</p>
+
+                    <div>
+                      <h2 className="font-semibold">{user.name}</h2>
+                      <p className="text-sm text-gray-500">
+                        {user.email}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="flex items-end justify-between pt-3 border-t border-slate-100">
+                  <div className="mt-4 flex justify-between">
                     <div>
-                      <p className="text-xs uppercase tracking-wide text-slate-400">
-                        Total entries
+                      <p className="text-xs text-gray-400">
+                        Total Entries
                       </p>
-                      <p className="text-lg font-semibold text-slate-900">{s.count}</p>
+                      <h3 className="text-xl font-bold">
+                        {user.count}
+                      </h3>
                     </div>
+
                     <div className="text-right">
-                      <p className="text-xs uppercase tracking-wide text-slate-400">Total</p>
-                      <p className="text-lg font-semibold text-blue-600">
-                       रु {formatAmount(s.total)}
+                      <p className="text-xs text-gray-400">
+                        Total Amount
                       </p>
+
+                      <h3 className="text-xl font-bold text-blue-600">
+                        रु {formatAmount(user.total)}
+                      </h3>
                     </div>
                   </div>
 
                   <button
-                    onClick={() => toggleExpanded(s.email)}
-                    className="flex items-center justify-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-700 pt-1"
+                    onClick={() => toggleExpanded(user.email)}
+                    className="w-full mt-4 flex justify-center items-center gap-1 text-sm text-blue-600"
                   >
-                    {isOpen ? "Hide expenses" : "Show expenses"}
+                    {open ? "Hide Expenses" : "Show Expenses"}
+
                     <ChevronDown
-                      className={`w-3.5 h-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                      className={`h-4 w-4 ${
+                        open ? "rotate-180" : ""
+                      } transition`}
                     />
                   </button>
 
-                  {isOpen && (
-                    <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
-                      {s.items.map((item) => (
+                  {open && (
+                    <div className="mt-4 border-t pt-3 space-y-3">
+                      {user.items.map((item) => (
                         <div
                           key={item._id}
-                          className="flex items-center justify-between gap-3 text-sm py-1.5"
+                          className="flex justify-between"
                         >
-                          <div className="min-w-0">
-                            <p className="text-slate-800 truncate">{item.title}</p>
-                            <span className="inline-block mt-0.5 text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-                              {item.category || "Uncategorized"}
+                          <div>
+                            <p className="font-medium">
+                              {item.title}
+                            </p>
+
+                            <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                              {item.category}
                             </span>
                           </div>
-                          <span className="flex-none font-medium text-slate-700">
-                            रु {formatAmount(Number(item.amount) || 0)}
-                          </span>
+
+                          <div className="font-semibold">
+                            रु {formatAmount(item.amount)}
+                          </div>
                         </div>
                       ))}
                     </div>
