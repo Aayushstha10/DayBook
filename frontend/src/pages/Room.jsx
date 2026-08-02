@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { Search, Receipt, AlertCircle, ChevronDown } from "lucide-react";
-import { ToastContainer,toast } from "react-toastify";
+import { Search, Receipt, AlertCircle, ChevronDown, X } from "lucide-react";
+import { ToastContainer, toast } from "react-toastify";
+
+const API = "https://daybook-j903.onrender.com/api/expenses";
 
 function formatAmount(n) {
   return Number(n).toLocaleString(undefined, {
@@ -23,6 +25,8 @@ export default function ExpenseSummary() {
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(new Set());
   const [editExpense, setEditExpense] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
+  const isAdmin = localStorage.getItem("role") === "admin";
 
   useEffect(() => {
     fetchExpenses();
@@ -36,8 +40,6 @@ export default function ExpenseSummary() {
       const res = await axios.get(
         "https://daybook-j903.onrender.com/api/allexpenses",
       );
-
-      console.log("API Response:", res.data);
 
       if (Array.isArray(res.data)) {
         setExpenses(res.data);
@@ -104,14 +106,12 @@ export default function ExpenseSummary() {
       return next;
     });
   };
-  const isAdmin = localStorage.getItem("role") === "admin";
-  const API="https://daybook-j903.onrender.com";
-  
-  const handleDelete = async (id) => {
+
+  const deleteExpense = async (id) => {
     try {
       const token = localStorage.getItem("token");
 
-      await axios.delete(`${API}/admin/expenses${id}`, {
+      await axios.delete(`${API}/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -126,19 +126,44 @@ export default function ExpenseSummary() {
     }
   };
 
-  const handleUpdate = async (id) => {
+  const updateExpense = async () => {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await axios.put(`${API}/${id}`, editExpense, {
+      // Only send the editable fields — sending the whole populated
+      // object (including nested user) back to the API can confuse
+      // the update route on the backend.
+      const payload = {
+        title: editExpense.title,
+        amount: editExpense.amount,
+        category: editExpense.category,
+        date: editExpense.date,
+      };
+
+      const res = await axios.put(`${API}/${editExpense._id}`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
+      const updated = res.data.expense;
+
       setExpenses((prev) =>
         prev.map((item) =>
-          item._id === editExpense._id ? res.data.expense : item,
+          item._id === editExpense._id
+            ? {
+                ...item,
+                ...updated,
+                // Keep the original populated user if the update
+                // response doesn't return one, so this item stays
+                // grouped under the correct person instead of
+                // falling into "Unknown User".
+                user:
+                  updated?.user && updated.user.email
+                    ? updated.user
+                    : item.user,
+              }
+            : item,
         ),
       );
 
@@ -152,7 +177,7 @@ export default function ExpenseSummary() {
 
   return (
     <div className="min-h-screen bg-slate-100 p-6">
-      <ToastContainer/>
+      <ToastContainer />
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
           <div>
@@ -273,7 +298,7 @@ export default function ExpenseSummary() {
                                 </button>
 
                                 <button
-                                  onClick={() => handleDelete(item._id)}
+                                  onClick={() => setDeleteId(item._id)}
                                   className="bg-red-500 text-white text-xs px-2 py-1 rounded"
                                 >
                                   Delete
@@ -290,6 +315,102 @@ export default function ExpenseSummary() {
             })}
         </div>
       </div>
+
+      {editExpense && (
+        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm relative">
+            <button
+              onClick={() => setEditExpense(null)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+
+            <h2 className="text-xl font-bold mb-4">Edit Expense</h2>
+
+            <input
+              className="border w-full p-2 mb-3 rounded"
+              value={editExpense.title}
+              onChange={(e) =>
+                setEditExpense({ ...editExpense, title: e.target.value })
+              }
+            />
+
+            <input
+              type="number"
+              className="border w-full p-2 mb-3 rounded"
+              value={editExpense.amount}
+              onChange={(e) =>
+                setEditExpense({ ...editExpense, amount: e.target.value })
+              }
+            />
+
+            <input
+              className="border w-full p-2 mb-3 rounded"
+              value={editExpense.category}
+              onChange={(e) =>
+                setEditExpense({ ...editExpense, category: e.target.value })
+              }
+            />
+
+            <input
+              type="date"
+              className="border w-full p-2 mb-4 rounded"
+              value={editExpense.date?.substring(0, 10)}
+              onChange={(e) =>
+                setEditExpense({ ...editExpense, date: e.target.value })
+              }
+            />
+
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
+              <button
+                onClick={() => setEditExpense(null)}
+                className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={updateExpense}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded"
+              >
+                Update
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteId && (
+        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-xs shadow-lg">
+            <h2 className="text-xl font-bold text-red-600 mb-3">
+              Delete Expense
+            </h2>
+
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete this expense?
+            </p>
+
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
+              <button
+                onClick={() => setDeleteId(null)}
+                className="px-5 py-2 rounded bg-gray-400 hover:bg-gray-500 text-white"
+              >
+                No
+              </button>
+
+              <button
+                onClick={() => deleteExpense(deleteId)}
+                className="px-5 py-2 rounded bg-red-600 hover:bg-red-700 text-white"
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
