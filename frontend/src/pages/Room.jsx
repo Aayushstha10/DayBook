@@ -1,11 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import {
-  Search,
-  Receipt,
-  AlertCircle,
-  ChevronDown,
-} from "lucide-react";
+import { Search, Receipt, AlertCircle, ChevronDown } from "lucide-react";
 
 function formatAmount(n) {
   return Number(n).toLocaleString(undefined, {
@@ -37,7 +32,7 @@ export default function ExpenseSummary() {
       setError("");
 
       const res = await axios.get(
-        "https://daybook-j903.onrender.com/api/allexpenses"
+        "https://daybook-j903.onrender.com/api/allexpenses",
       );
 
       console.log("API Response:", res.data);
@@ -90,7 +85,7 @@ export default function ExpenseSummary() {
     return summaries.filter(
       (user) =>
         user.name.toLowerCase().includes(query.toLowerCase()) ||
-        user.email.toLowerCase().includes(query.toLowerCase())
+        user.email.toLowerCase().includes(query.toLowerCase()),
     );
   }, [query, summaries]);
 
@@ -111,7 +106,6 @@ export default function ExpenseSummary() {
   return (
     <div className="min-h-screen bg-slate-100 p-6">
       <div className="max-w-6xl mx-auto">
-
         <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold">Expense Summary</h1>
@@ -137,9 +131,7 @@ export default function ExpenseSummary() {
         </div>
 
         {loading && (
-          <div className="text-center py-10 text-gray-500">
-            Loading...
-          </div>
+          <div className="text-center py-10 text-gray-500">Loading...</div>
         )}
 
         {!loading && error && (
@@ -157,7 +149,6 @@ export default function ExpenseSummary() {
         )}
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-
           {!loading &&
             !error &&
             filtered.map((user) => {
@@ -175,26 +166,18 @@ export default function ExpenseSummary() {
 
                     <div>
                       <h2 className="font-semibold">{user.name}</h2>
-                      <p className="text-sm text-gray-500">
-                        {user.email}
-                      </p>
+                      <p className="text-sm text-gray-500">{user.email}</p>
                     </div>
                   </div>
 
                   <div className="mt-4 flex justify-between">
                     <div>
-                      <p className="text-xs text-gray-400">
-                        Total Entries
-                      </p>
-                      <h3 className="text-xl font-bold">
-                        {user.count}
-                      </h3>
+                      <p className="text-xs text-gray-400">Total Entries</p>
+                      <h3 className="text-xl font-bold">{user.count}</h3>
                     </div>
 
                     <div className="text-right">
-                      <p className="text-xs text-gray-400">
-                        Total Amount
-                      </p>
+                      <p className="text-xs text-gray-400">Total Amount</p>
 
                       <h3 className="text-xl font-bold text-blue-600">
                         रु {formatAmount(user.total)}
@@ -218,14 +201,9 @@ export default function ExpenseSummary() {
                   {open && (
                     <div className="mt-4 border-t pt-3 space-y-3">
                       {user.items.map((item) => (
-                        <div
-                          key={item._id}
-                          className="flex justify-between"
-                        >
+                        <div key={item._id} className="flex justify-between">
                           <div>
-                            <p className="font-medium">
-                              {item.title}
-                            </p>
+                            <p className="font-medium">{item.title}</p>
 
                             <span className="text-xs bg-gray-100 px-2 py-1 rounded">
                               {item.category}

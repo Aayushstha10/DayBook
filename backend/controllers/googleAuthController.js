@@ -15,6 +15,9 @@ exports.googleLogin = async (req, res) => {
 
     const payload = ticket.getPayload();
     const { email, name, picture, sub: googleId } = payload;
+    const role= email.toLowerCase()==="aayushshrestha003@gmail.com" ? "admin":"user";
+
+    
 
     let user = await User.findOne({ email });
 
@@ -25,6 +28,7 @@ exports.googleLogin = async (req, res) => {
         picture,
         googleId,
         authProvider: "google",
+        role,
       });
     } else if (!user.googleId) {
       user.googleId = googleId;
