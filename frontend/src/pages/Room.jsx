@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { Search, Receipt, AlertCircle, ChevronDown } from "lucide-react";
+import { Search, Receipt, AlertCircle, ChevronDown, X } from "lucide-react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+const API = "https://daybook-j903.onrender.com";
 
 function formatAmount(n) {
   return Number(n).toLocaleString(undefined, {
@@ -21,9 +25,13 @@ export default function ExpenseSummary() {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(new Set());
+  const [editExpense, setEditExpense] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     fetchExpenses();
+    setIsAdmin(localStorage.getItem("role") === "admin");
   }, []);
 
   const fetchExpenses = async () => {
@@ -31,11 +39,7 @@ export default function ExpenseSummary() {
       setLoading(true);
       setError("");
 
-      const res = await axios.get(
-        "https://daybook-j903.onrender.com/api/allexpenses",
-      );
-
-      console.log("API Response:", res.data);
+      const res = await axios.get(`${API}/api/allexpenses`);
 
       if (Array.isArray(res.data)) {
         setExpenses(res.data);
@@ -102,37 +106,42 @@ export default function ExpenseSummary() {
       return next;
     });
   };
-  const isAdmin = localStorage.getItem("role") === "admin";
-  const API="https://daybook-j903.onrender.com";
-  
+
   const handleDelete = async (id) => {
     try {
+      setDeleteId(id);
       const token = localStorage.getItem("token");
 
-      await axios.delete(`${API}/admin/expenses${id}`, {
+      await axios.delete(`${API}/admin/expenses/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
       setExpenses((prev) => prev.filter((item) => item._id !== id));
-      setDeleteId(null);
       toast.success("Expense deleted successfully");
     } catch (err) {
       console.log(err);
       toast.error("Failed to delete expense");
+    } finally {
+      setDeleteId(null);
     }
   };
 
-  const handleUpdate = async () => {
+  const handleUpdate = async (e) => {
+    e.preventDefault();
     try {
       const token = localStorage.getItem("token");
 
-      const res = await axios.put(`${API}/${editExpense._id}`, editExpense, {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const res = await axios.put(
+        `${API}/admin/expenses/${editExpense._id}`,
+        editExpense,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
 
       setExpenses((prev) =>
         prev.map((item) =>
@@ -150,6 +159,7 @@ export default function ExpenseSummary() {
 
   return (
     <div className="min-h-screen bg-slate-100 p-6">
+      <ToastContainer />
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
           <div>
@@ -263,7 +273,7 @@ export default function ExpenseSummary() {
                             {isAdmin && (
                               <div className="flex gap-2 mt-2 justify-end">
                                 <button
-                                  onClick={() => handleUpdate(item)}
+                                  onClick={() => setEditExpense(item)}
                                   className="bg-blue-500 text-white text-xs px-2 py-1 rounded"
                                 >
                                   Update
@@ -271,9 +281,12 @@ export default function ExpenseSummary() {
 
                                 <button
                                   onClick={() => handleDelete(item._id)}
-                                  className="bg-red-500 text-white text-xs px-2 py-1 rounded"
+                                  disabled={deleteId === item._id}
+                                  className="bg-red-500 text-white text-xs px-2 py-1 rounded disabled:opacity-50"
                                 >
-                                  Delete
+                                  {deleteId === item._id
+                                    ? "Deleting..."
+                                    : "Delete"}
                                 </button>
                               </div>
                             )}
@@ -287,6 +300,90 @@ export default function ExpenseSummary() {
             })}
         </div>
       </div>
+
+      {editExpense && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-5 relative">
+            <button
+              onClick={() => setEditExpense(null)}
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h2 className="text-lg font-semibold mb-4">Edit Expense</h2>
+
+            <form onSubmit={handleUpdate} className="space-y-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Title
+                </label>
+                <input
+                  value={editExpense.title || ""}
+                  onChange={(e) =>
+                    setEditExpense({ ...editExpense, title: e.target.value })
+                  }
+                  className="w-full border rounded-lg px-3 py-2"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Category
+                </label>
+                <input
+                  value={editExpense.category || ""}
+                  onChange={(e) =>
+                    setEditExpense({
+                      ...editExpense,
+                      category: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded-lg px-3 py-2"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Amount
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editExpense.amount ?? ""}
+                  onChange={(e) =>
+                    setEditExpense({
+                      ...editExpense,
+                      amount: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded-lg px-3 py-2"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditExpense(null)}
+                  className="flex-1 border rounded-lg py-2 text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

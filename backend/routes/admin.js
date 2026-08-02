@@ -7,8 +7,8 @@ const admin = require("../middleware/admin");
 const updateExpense = require("../controllers/updateExpense");
 const deleteExpense = require("../controllers/deleteExpense");
 
-router.put("/admin/expenses/:id", auth, admin, updateExpense);
+router.put("/expenses/:id", auth, admin, updateExpense);
 
-router.delete("/admin/expenses/:id", auth, admin, deleteExpense);
+router.delete("/expenses/:id", auth, admin, deleteExpense);
 
 module.exports = router;
