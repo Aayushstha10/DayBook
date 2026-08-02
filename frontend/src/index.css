@@ -51,9 +51,10 @@ body {
   outline: 2px solid #c9a227;
   outline-offset: 2px;
 }
+
 input[type="date"]::-webkit-calendar-picker-indicator {
-  opacity: 1;
-  display: block;
+  display: none;
+  -webkit-appearance: none;
 }
 @media (prefers-reduced-motion: reduce) {
   * {

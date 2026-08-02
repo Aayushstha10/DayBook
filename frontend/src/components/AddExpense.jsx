@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 const AddExpense = ({ onAddExpense }) => {
   const navigate = useNavigate();
+  const dateRef = useRef(null);
 
   const [showForm, setShowForm] = useState(false);
   useEffect(() => {
@@ -26,13 +27,19 @@ const AddExpense = ({ onAddExpense }) => {
     date: "",
   });
 
-  const [error, setError] = useState("");
-
   const handleChange = (e) => {
     setExpense({
       ...expense,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const openDatePicker = () => {
+    if (dateRef.current?.showPicker) {
+      dateRef.current.showPicker();
+    } else {
+      dateRef.current?.focus();
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -84,7 +91,6 @@ const AddExpense = ({ onAddExpense }) => {
       });
     } catch (error) {
       console.error(error.response?.data || error.message);
-
       toast.error("Failed to create expense");
     }
   };
@@ -143,19 +149,36 @@ const AddExpense = ({ onAddExpense }) => {
                 <option value="Others">Others</option>
               </select>
 
-              <input
-                type="date"
-                name="date"
-                value={expense.date}
-                onChange={handleChange}
-                className="w-full p-2 border rounded bg-white"
-                style={{ colorScheme: "light" }}
-                max={
-                  new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
-                    .toISOString()
-                    .split("T")[0]
-                }
-              />
+              <div className="relative w-full" onClick={openDatePicker}>
+                <input
+                  ref={dateRef}
+                  type="date"
+                  name="date"
+                  value={expense.date}
+                  onChange={handleChange}
+                  className="w-full p-2 pr-10 border rounded bg-white appearance-none"
+                  style={{ colorScheme: "light" }}
+                  max={
+                    new Date(
+                      Date.now() - new Date().getTimezoneOffset() * 60000,
+                    )
+                      .toISOString()
+                      .split("T")[0]
+                  }
+                />
+                <svg
+                  className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <rect x="3" y="4" width="18" height="18" rx="2" />
+                  <path d="M16 2v4M8 2v4M3 10h18" />
+                </svg>
+              </div>
 
               <div className="flex justify-end gap-3">
                 <button
