@@ -1,9 +1,8 @@
 const Expense = require("../models/Expenses");
 
-const getallexpenses = async (req, res) => {
+const getAllExpenses = async (req, res) => {
   try {
-    const expenses = await Expense.find()
-      .populate("user", "name email");
+    const expenses = await Expense.find().populate("user", "name email");
 
     res.status(200).json({
       success: true,
@@ -17,4 +16,4 @@ const getallexpenses = async (req, res) => {
   }
 };
 
-module.exports = getallexpenses;
+module.exports = getAllExpenses;
