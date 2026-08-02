@@ -23,15 +23,15 @@ html {
 }
 
 body {
-  background-color: #F7F5F0;
-  color: #1B2430;
-  font-family: 'Inter', sans-serif;
+  background-color: #f7f5f0;
+  color: #1b2430;
+  font-family: "Inter", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background-color: #C9A227;
-  color: #1B2430;
+  background-color: #c9a227;
+  color: #1b2430;
 }
 
 /* tabular figures everywhere money shows up */
@@ -41,17 +41,20 @@ body {
 
 /* thin dashed row divider, receipt-like */
 .receipt-row {
-  border-bottom: 1px dashed #D8D3C6;
+  border-bottom: 1px dashed #d8d3c6;
 }
 .receipt-row:last-child {
   border-bottom: none;
 }
 
 :focus-visible {
-  outline: 2px solid #C9A227;
+  outline: 2px solid #c9a227;
   outline-offset: 2px;
 }
-
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 1;
+  display: block;
+}
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.001ms !important;

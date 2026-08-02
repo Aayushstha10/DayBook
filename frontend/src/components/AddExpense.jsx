@@ -149,6 +149,7 @@ const AddExpense = ({ onAddExpense }) => {
                 value={expense.date}
                 onChange={handleChange}
                 className="w-full p-2 border rounded bg-white"
+                style={{ colorScheme: "light" }}
                 max={
                   new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
                     .toISOString()
