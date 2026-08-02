@@ -176,12 +176,12 @@ export default function ExpenseSummary() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 p-6">
+    <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
       <ToastContainer />
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Expense Summary</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">Expense Summary</h1>
             <p className="text-gray-500">
               {loading
                 ? "Loading..."
@@ -221,7 +221,7 @@ export default function ExpenseSummary() {
           </div>
         )}
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {!loading &&
             !error &&
             filtered.map((user) => {
@@ -230,20 +230,20 @@ export default function ExpenseSummary() {
               return (
                 <div
                   key={user.email}
-                  className="bg-white rounded-xl shadow p-5"
+                  className="bg-white rounded-xl shadow p-4 min-w-0"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-700">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-11 h-11 shrink-0 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-700">
                       {initials(user.name)}
                     </div>
 
-                    <div>
-                      <h2 className="font-semibold">{user.name}</h2>
-                      <p className="text-sm text-gray-500">{user.email}</p>
+                    <div className="min-w-0">
+                      <h2 className="font-semibold truncate">{user.name}</h2>
+                      <p className="text-sm text-gray-500 truncate">{user.email}</p>
                     </div>
                   </div>
 
-                  <div className="mt-4 flex justify-between">
+                  <div className="mt-4 flex justify-between gap-2">
                     <div>
                       <p className="text-xs text-gray-400">Total Entries</p>
                       <h3 className="text-xl font-bold">{user.count}</h3>
@@ -252,7 +252,7 @@ export default function ExpenseSummary() {
                     <div className="text-right">
                       <p className="text-xs text-gray-400">Total Amount</p>
 
-                      <h3 className="text-xl font-bold text-blue-600">
+                      <h3 className="text-lg xs:text-xl font-bold text-blue-600">
                         रु {formatAmount(user.total)}
                       </h3>
                     </div>
@@ -274,16 +274,16 @@ export default function ExpenseSummary() {
                   {open && (
                     <div className="mt-4 border-t pt-3 space-y-3">
                       {user.items.map((item) => (
-                        <div key={item._id} className="flex justify-between">
-                          <div>
-                            <p className="font-medium">{item.title}</p>
+                        <div key={item._id} className="flex justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{item.title}</p>
 
                             <span className="text-xs bg-gray-100 px-2 py-1 rounded">
                               {item.category}
                             </span>
                           </div>
 
-                          <div className="text-right">
+                          <div className="text-right shrink-0">
                             <div className="font-semibold">
                               रु {formatAmount(item.amount)}
                             </div>
@@ -318,7 +318,7 @@ export default function ExpenseSummary() {
 
       {editExpense && (
         <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm relative">
+          <div className="bg-white rounded-xl p-5 sm:p-6 w-full max-w-sm relative">
             <button
               onClick={() => setEditExpense(null)}
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
@@ -384,7 +384,7 @@ export default function ExpenseSummary() {
 
       {deleteId && (
         <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-xs shadow-lg">
+          <div className="bg-white rounded-xl p-5 sm:p-6 w-full max-w-xs shadow-lg">
             <h2 className="text-xl font-bold text-red-600 mb-3">
               Delete Expense
             </h2>
