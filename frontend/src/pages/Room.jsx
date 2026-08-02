@@ -102,6 +102,51 @@ export default function ExpenseSummary() {
       return next;
     });
   };
+  const isAdmin = localStorage.getItem("role") === "admin";
+  const API="https://daybook-j903.onrender.com";
+  
+  const handleDelete = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      await axios.delete(`${API}/admin/expenses${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setExpenses((prev) => prev.filter((item) => item._id !== id));
+      setDeleteId(null);
+      toast.success("Expense deleted successfully");
+    } catch (err) {
+      console.log(err);
+      toast.error("Failed to delete expense");
+    }
+  };
+
+  const handleUpdate = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await axios.put(`${API}/${editExpense._id}`, editExpense, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setExpenses((prev) =>
+        prev.map((item) =>
+          item._id === editExpense._id ? res.data.expense : item,
+        ),
+      );
+
+      toast.success("Expense updated successfully");
+      setEditExpense(null);
+    } catch (err) {
+      console.log(err);
+      toast.error("Failed to update expense");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 p-6">
@@ -210,8 +255,28 @@ export default function ExpenseSummary() {
                             </span>
                           </div>
 
-                          <div className="font-semibold">
-                            रु {formatAmount(item.amount)}
+                          <div className="text-right">
+                            <div className="font-semibold">
+                              रु {formatAmount(item.amount)}
+                            </div>
+
+                            {isAdmin && (
+                              <div className="flex gap-2 mt-2 justify-end">
+                                <button
+                                  onClick={() => handleUpdate(item)}
+                                  className="bg-blue-500 text-white text-xs px-2 py-1 rounded"
+                                >
+                                  Update
+                                </button>
+
+                                <button
+                                  onClick={() => handleDelete(item._id)}
+                                  className="bg-red-500 text-white text-xs px-2 py-1 rounded"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
