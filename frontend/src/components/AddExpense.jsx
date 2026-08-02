@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -7,6 +7,17 @@ const AddExpense = ({ onAddExpense }) => {
   const navigate = useNavigate();
 
   const [showForm, setShowForm] = useState(false);
+  useEffect(() => {
+    if (showForm) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [showForm]);
 
   const [expense, setExpense] = useState({
     title: "",
@@ -90,7 +101,7 @@ const AddExpense = ({ onAddExpense }) => {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
+        <div className="fixed inset-0 overflow-hidden flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6">
             <h2 className="text-2xl font-bold text-center mb-6">Add Expense</h2>
 
@@ -137,7 +148,7 @@ const AddExpense = ({ onAddExpense }) => {
                 name="date"
                 value={expense.date}
                 onChange={handleChange}
-                className="w-full border rounded-lg px-4 py-2"
+                className="w-full p-2 border rounded bg-white"
                 max={
                   new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
                     .toISOString()
