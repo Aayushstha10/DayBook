@@ -3,7 +3,6 @@ import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-
 const titles = {
   "/dashboard": {
     title: "Dashboard",
@@ -56,11 +55,9 @@ export default function MainLayout() {
           <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <Outlet />
           </div>
-          
         </main>
-        <Footer />
+        {!sidebarOpen && <Footer />}
       </div>
-      
     </div>
   );
 }
