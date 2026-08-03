@@ -18,7 +18,7 @@ export default function Dashboard() {
   }, [location, navigate]);
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 md:p-8">
+    <div className=" bg-slate-100 p-4 md:p-8">
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold">Expense Dashboard</h1>

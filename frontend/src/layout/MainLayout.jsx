@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+
 const titles = {
   "/dashboard": {
     title: "Dashboard",
@@ -34,6 +35,13 @@ export default function MainLayout() {
     title: "Daybook",
     subtitle: "",
   };
+
+  useEffect(() => {
+    document.body.style.overflow = sidebarOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
 
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
