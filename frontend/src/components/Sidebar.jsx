@@ -20,10 +20,10 @@ export default function Sidebar({ open, onClose }) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 h-screen bg-ink text-paper flex flex-col overflow-hidden
-  transform transition-transform duration-200
-  md:translate-x-0 md:static
-  ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-ink text-paper flex flex-col overflow-hidden
+        transform transition-transform duration-200
+        md:translate-x-0 md:static
+        ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="px-6 py-6 border-b border-white/10 relative z-50">
           <NavLink
