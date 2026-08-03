@@ -20,19 +20,19 @@ export default function Sidebar({ open, onClose }) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-ink text-paper flex flex-col overflow-hidden
+        className={`fixed inset-y-0 left-0 z-50 w-[80vw] max-w-64 sm:w-64 bg-ink text-paper flex flex-col overflow-hidden
         transform transition-transform duration-200
-        md:translate-x-0 md:static
+        md:translate-x-0 md:static md:w-56 lg:w-64
         ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="px-6 py-6 border-b border-white/10 relative z-50">
+        <div className="px-4 sm:px-6 py-5 sm:py-6 border-b border-white/10 relative z-50">
           <NavLink
             to="/dashboard"
             onClick={onClose}
             className="flex items-baseline gap-2 w-fit relative z-50 cursor-pointer"
             style={{ pointerEvents: "auto" }}
           >
-            <span className="font-display text-2xl font-semibold tracking-tight">
+            <span className="font-display text-xl sm:text-2xl font-semibold tracking-tight">
               Daybook
             </span>
             <span className="text-gold text-xs font-mono">v1</span>
@@ -43,7 +43,7 @@ export default function Sidebar({ open, onClose }) {
           </p>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-2 sm:px-3 py-4 space-y-1 overflow-y-auto">
           {links.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
@@ -59,13 +59,13 @@ export default function Sidebar({ open, onClose }) {
               }
             >
               <Icon className="w-4 h-4 shrink-0" />
-              <span>{label}</span>
+              <span className="truncate">{label}</span>
             </NavLink>
           ))}
         </nav>
 
-        <div className="px-6 py-5 border-t border-white/10">
-          <p className="text-xs text-slate-light leading-relaxed">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-t border-white/10">
+          <p className="text-[11px] sm:text-xs text-slate-light leading-relaxed">
             Data lives only in this browser — nothing leaves your device.
           </p>
         </div>
@@ -74,7 +74,6 @@ export default function Sidebar({ open, onClose }) {
   );
 }
 
-// Dashboard
 function LedgerIcon(props) {
   return (
     <svg
@@ -90,7 +89,6 @@ function LedgerIcon(props) {
   );
 }
 
-// Transactions
 function ListIcon(props) {
   return (
     <svg
@@ -105,7 +103,6 @@ function ListIcon(props) {
   );
 }
 
-// Profile
 function UserIcon(props) {
   return (
     <svg
@@ -124,7 +121,6 @@ function UserIcon(props) {
   );
 }
 
-// Room
 function RoomIcon(props) {
   return (
     <svg
@@ -142,7 +138,6 @@ function RoomIcon(props) {
   );
 }
 
-// Settings
 function GearIcon(props) {
   return (
     <svg
