@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 
 const links = [
@@ -9,8 +10,25 @@ const links = [
 ];
 
 export default function Sidebar({ open, onClose }) {
+  // Prevent background scrolling when sidebar is open
+  useEffect(() => {
+    if (open) {
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
   return (
     <>
+      {/* Overlay */}
       {open && (
         <div
           className="fixed inset-0 z-30 bg-ink/50 md:hidden"
@@ -19,12 +37,14 @@ export default function Sidebar({ open, onClose }) {
         />
       )}
 
+      {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-64 bg-ink text-paper flex flex-col
-        transform transition-transform duration-200
+        transform transition-transform duration-200 ease-in-out
         md:translate-x-0 md:static
         ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
+        {/* Logo */}
         <div className="px-6 py-6 border-b border-white/10">
           <div className="flex items-baseline gap-2">
             <span className="font-display text-2xl font-semibold tracking-tight">
@@ -38,6 +58,7 @@ export default function Sidebar({ open, onClose }) {
           </p>
         </div>
 
+        {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           {links.map(({ to, label, icon: Icon }) => (
             <NavLink
@@ -59,6 +80,7 @@ export default function Sidebar({ open, onClose }) {
           ))}
         </nav>
 
+        {/* Footer */}
         <div className="px-6 py-5 border-t border-white/10">
           <p className="text-xs text-slate-light leading-relaxed">
             Data lives only in this browser — nothing leaves your device.
@@ -69,7 +91,7 @@ export default function Sidebar({ open, onClose }) {
   );
 }
 
-// Dashboard
+// Dashboard Icon
 function LedgerIcon(props) {
   return (
     <svg
@@ -85,7 +107,7 @@ function LedgerIcon(props) {
   );
 }
 
-// Transactions
+// Transactions Icon
 function ListIcon(props) {
   return (
     <svg
@@ -100,7 +122,7 @@ function ListIcon(props) {
   );
 }
 
-// Profile
+// Profile Icon
 function UserIcon(props) {
   return (
     <svg
@@ -119,7 +141,7 @@ function UserIcon(props) {
   );
 }
 
-// Room
+// Room Icon
 function RoomIcon(props) {
   return (
     <svg
@@ -137,7 +159,7 @@ function RoomIcon(props) {
   );
 }
 
-// Settings
+// Settings Icon
 function GearIcon(props) {
   return (
     <svg

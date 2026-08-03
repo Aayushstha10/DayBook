@@ -32,7 +32,7 @@ export default function MainLayout() {
   const location = useLocation();
 
   const meta = titles[location.pathname] || {
-    title: "Ledger",
+    title: "Daybook",
     subtitle: "",
   };
 
