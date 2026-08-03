@@ -40,7 +40,6 @@ const Transaction = () => {
     return transactions.filter((item) => {
       const title = item.title?.toLowerCase() || "";
       const category = item.category?.toLowerCase() || "";
-
       return (
         title.includes(search.toLowerCase()) ||
         category.includes(search.toLowerCase())
@@ -84,7 +83,6 @@ const Transaction = () => {
         </button>
       </div>
 
-      {/* Search */}
       <div className="bg-white rounded-xl shadow p-3 sm:p-4 mb-5 sm:mb-6">
         <div className="relative">
           <FiSearch
@@ -101,7 +99,6 @@ const Transaction = () => {
         </div>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6 sm:mb-8">
         <div className="bg-white rounded-xl shadow p-3.5 sm:p-5 hover:shadow-lg transition">
           <p className="text-gray-500 text-xs sm:text-sm">Total Expense</p>
@@ -131,8 +128,6 @@ const Transaction = () => {
           </h2>
         </div>
       </div>
-
-      {/* Transactions */}
       <div className="bg-white rounded-xl shadow overflow-hidden">
         <div className="flex flex-row justify-between items-center gap-3 p-4 sm:p-5 border-b">
           <h2 className="text-base sm:text-xl font-bold">
@@ -154,7 +149,6 @@ const Transaction = () => {
           </div>
         ) : (
           <>
-            {/* Mobile: card list (hidden on md and up) */}
             <ul className="md:hidden divide-y">
               {filteredTransactions.map((item, index) => (
                 <li key={item._id} className="p-4 active:bg-gray-50">

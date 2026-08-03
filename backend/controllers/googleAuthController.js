@@ -40,8 +40,6 @@ exports.googleLogin = async (req, res) => {
 
       user.name = name;
       user.picture = picture;
-
-      // Automatically promote the admin email
       if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
         user.role = "admin";
       }

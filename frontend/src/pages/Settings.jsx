@@ -31,37 +31,50 @@ const defaultSettings = [
 ];
 
 const API_BASE = "https://daybook-j903.onrender.com/api";
+const EXPENSES_URL = `${API_BASE}/expenses`;
+
+function getAuthHeader() {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function loadStoredSettings() {
+  try {
+    const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (!saved) return defaultSettings;
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : defaultSettings;
+  } catch {
+    // Corrupted or invalid JSON in storage — fall back to defaults
+    return defaultSettings;
+  }
+}
 
 export default function Settings() {
-  const [settings, setSettings] = useState(() => {
-    const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : defaultSettings;
-  });
+  const [settings, setSettings] = useState(loadStoredSettings);
 
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [clearing, setClearing] = useState(false);
-  const [status, setStatus] = useState(null); // { type: 'success' | 'error', message }
+  const [status, setStatus] = useState(null);
   const confirmTimeout = useRef(null);
   const statusTimeout = useRef(null);
 
-  const getAuthHeader = () => {
-    const token = localStorage.getItem("token");
-    return token ? { Authorization: `Bearer ${token}` } : {};
+  const showStatus = (type, message) => {
+    setStatus({ type, message });
+    clearTimeout(statusTimeout.current);
+    statusTimeout.current = setTimeout(() => setStatus(null), 3000);
   };
 
   const fetchTransactions = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_BASE}/expenses`, {
+      const res = await axios.get(EXPENSES_URL, {
         headers: getAuthHeader(),
       });
-
-      // Adjust this line if your API wraps the array, e.g. response.data.expenses
-      const data = Array.isArray(response.data)
-        ? response.data
-        : response.data.expenses || [];
+      // Adjust this line if your API wraps the array, e.g. res.data.expenses
+      const data = Array.isArray(res.data) ? res.data : res.data.expenses || [];
 
       setTransactions(data);
     } catch (err) {
@@ -81,17 +94,12 @@ export default function Settings() {
       clearTimeout(confirmTimeout.current);
       clearTimeout(statusTimeout.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   }, [settings]);
-
-  const showStatus = (type, message) => {
-    setStatus({ type, message });
-    clearTimeout(statusTimeout.current);
-    statusTimeout.current = setTimeout(() => setStatus(null), 3000);
-  };
 
   const toggle = (id) => {
     setSettings((prev) =>
@@ -157,7 +165,7 @@ export default function Settings() {
     setClearing(true);
 
     try {
-      await axios.delete(`${API_BASE}/expenses`, {
+      await axios.delete(EXPENSES_URL, {
         headers: getAuthHeader(),
       });
 

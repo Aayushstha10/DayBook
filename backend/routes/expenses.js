@@ -14,8 +14,6 @@ router.get("/expenses", getExpenses);
 router.put("/expenses/:id", updateExpense);
 router.delete("/expenses/:id", deleteExpense);
 router.put("/expenses/:id", auth, admin, updateExpense);
-
-// Delete Expense (Admin Only)
 router.delete("/expenses/:id", auth, admin, deleteExpense);
 
 module.exports = router;

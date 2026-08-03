@@ -1,367 +1,284 @@
-import { useEffect, useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import axios from "axios";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { Eye, Pencil, Trash2, X } from "lucide-react";
 
-const API = "https://daybook-j903.onrender.com/api/expenses";
+const SETTINGS_STORAGE_KEY = "app_settings";
 
-export default function Transactions() {
-  const [expenses, setExpenses] = useState([]);
-  const [search, setSearch] = useState("");
-  const [selectedExpense, setSelectedExpense] = useState(null);
-  const [editExpense, setEditExpense] = useState(null);
-  const [deleteId, setDeleteId] = useState(null);
+const defaultSettings = [
+  {
+    id: "notifications",
+    label: "Email me a weekly summary",
+    description: "A digest of the past week\u2019s spending, every Monday.",
+    enabled: true,
+  },
+  {
+    id: "budgetAlerts",
+    label: "Budget alerts",
+    description: "Warn me when a category goes over budget.",
+    enabled: true,
+  },
+  {
+    id: "roundUp",
+    label: "Round up amounts",
+    description: "Display amounts rounded to the nearest dollar.",
+    enabled: false,
+  },
+  {
+    id: "darkMode",
+    label: "Dark sidebar",
+    description: "Keep the sidebar dark regardless of system theme.",
+    enabled: true,
+  },
+];
+
+const API_BASE = "https://daybook-j903.onrender.com/api";
+const EXPENSES_URL = `${API_BASE}/expenses`;
+
+function getAuthHeader() {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function loadStoredSettings() {
+  try {
+    const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (!saved) return defaultSettings;
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : defaultSettings;
+  } catch {
+    // Corrupted or invalid JSON in storage — fall back to defaults
+    return defaultSettings;
+  }
+}
+
+export default function Settings() {
+  const [settings, setSettings] = useState(loadStoredSettings);
+
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [confirmingClear, setConfirmingClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [status, setStatus] = useState(null);
+  const confirmTimeout = useRef(null);
+  const statusTimeout = useRef(null);
+
+  const showStatus = (type, message) => {
+    setStatus({ type, message });
+    clearTimeout(statusTimeout.current);
+    statusTimeout.current = setTimeout(() => setStatus(null), 3000);
+  };
+
+  const fetchTransactions = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(EXPENSES_URL, {
+        headers: getAuthHeader(),
+      });
+      // Adjust this line if your API wraps the array, e.g. res.data.expenses
+      const data = Array.isArray(res.data) ? res.data : res.data.expenses || [];
+
+      setTransactions(data);
+    } catch (err) {
+      showStatus(
+        "error",
+        err.response?.data?.message || "Failed to load transactions.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetchExpenses();
+    fetchTransactions();
+
+    return () => {
+      clearTimeout(confirmTimeout.current);
+      clearTimeout(statusTimeout.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchExpenses = async () => {
-    try {
-      const token = localStorage.getItem("token");
+  useEffect(() => {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  }, [settings]);
 
-      const res = await axios.get(API, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      setExpenses(res.data.expenses || []);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  const deleteExpense = async (id) => {
-    try {
-      const token = localStorage.getItem("token");
-
-      await axios.delete(`${API}/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      setExpenses((prev) => prev.filter((item) => item._id !== id));
-      setDeleteId(null);
-      toast.success("Expense deleted successfully");
-    } catch (err) {
-      console.log(err);
-      toast.error("Failed to delete expense");
-    }
-  };
-
-  const updateExpense = async () => {
-    try {
-      const token = localStorage.getItem("token");
-
-      const res = await axios.put(`${API}/${editExpense._id}`, editExpense, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      setExpenses((prev) =>
-        prev.map((item) =>
-          item._id === editExpense._id ? res.data.expense : item,
-        ),
-      );
-
-      toast.success("Expense updated successfully");
-      setEditExpense(null);
-    } catch (err) {
-      console.log(err);
-      toast.error("Failed to update expense");
-    }
-  };
-
-  const filtered = expenses.filter((item) => {
-    return (
-      item.title.toLowerCase().includes(search.toLowerCase()) ||
-      item.category.toLowerCase().includes(search.toLowerCase())
+  const toggle = (id) => {
+    setSettings((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s)),
     );
-  });
+  };
 
-  const IconBtn = ({ onClick, color, label, children }) => (
-    <button
-      onClick={onClick}
-      title={label}
-      aria-label={label}
-      className={`p-2 rounded-lg text-white ${color} transition-colors`}
-    >
-      {children}
-    </button>
-  );
+  const escapeCsvCell = (value) => {
+    const str = String(value);
+    if (/[",\n]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const handleExport = () => {
+    try {
+      if (transactions.length === 0) {
+        showStatus("error", "No transactions to export.");
+        return;
+      }
+
+      const headers = ["Date", "Title", "Category", "Amount"];
+      const rows = transactions.map((t) => [
+        t.date,
+        t.title,
+        t.category,
+        Number(t.amount).toFixed(2),
+      ]);
+      const csv = [headers, ...rows]
+        .map((row) => row.map(escapeCsvCell).join(","))
+        .join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const today = new Date().toISOString().slice(0, 10);
+      link.href = url;
+      link.download = `transactions-${today}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showStatus("success", `Exported ${transactions.length} transactions.`);
+    } catch (err) {
+      showStatus("error", "Export failed. Please try again.");
+    }
+  };
+
+  const handleClearClick = async () => {
+    if (!confirmingClear) {
+      setConfirmingClear(true);
+      confirmTimeout.current = setTimeout(
+        () => setConfirmingClear(false),
+        4000,
+      );
+      return;
+    }
+
+    clearTimeout(confirmTimeout.current);
+    setConfirmingClear(false);
+    setClearing(true);
+
+    // This API has no bulk-delete endpoint — only DELETE /expenses/:id
+    // (see Transactions.jsx) — so clear everything by deleting each
+    // transaction individually.
+    const idsToDelete = transactions.map((t) => t._id);
+    const results = await Promise.allSettled(
+      idsToDelete.map((id) =>
+        axios.delete(`${EXPENSES_URL}/${id}`, { headers: getAuthHeader() }),
+      ),
+    );
+
+    const failedCount = results.filter((r) => r.status === "rejected").length;
+
+    if (failedCount === 0) {
+      setTransactions([]);
+      showStatus("success", "All transactions cleared.");
+    } else if (failedCount === idsToDelete.length) {
+      showStatus("error", "Failed to clear transactions.");
+    } else {
+      showStatus(
+        "error",
+        `Cleared ${idsToDelete.length - failedCount} of ${idsToDelete.length}. Some failed — try again.`,
+      );
+    }
+
+    // Re-sync with the server in case some deletes failed partway through
+    await fetchTransactions();
+    setClearing(false);
+  };
 
   return (
-    <div className="bg-white rounded-xl shadow p-4 sm:p-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5">
-        <h2 className="text-xl sm:text-2xl font-bold">Transactions</h2>
+    <div className="max-w-xl space-y-4">
+      {status && (
+        <div
+          role="status"
+          className={`text-xs rounded-card px-4 py-2 border ${
+            status.type === "success"
+              ? "bg-moss/10 border-moss/20 text-moss"
+              : "bg-rust/10 border-rust/20 text-rust"
+          }`}
+        >
+          {status.message}
+        </div>
+      )}
 
-        <input
-          className="border rounded-lg px-4 py-2 w-full sm:w-72"
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-3 text-left">Title</th>
-              <th className="p-3 text-left">Category</th>
-              <th className="p-3 text-left">Amount</th>
-              <th className="p-3 text-left">Date</th>
-              <th className="p-3 text-center">Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filtered.map((item) => (
-              <tr key={item._id} className="border-b hover:bg-gray-50">
-                <td className="p-3">{item.title}</td>
-                <td className="p-3">{item.category}</td>
-                <td className="p-3">रु {item.amount}</td>
-                <td className="p-3">
-                  {new Date(item.date).toLocaleDateString()}
-                </td>
-
-                <td className="p-3">
-                  <div className="flex justify-center gap-2">
-                    <IconBtn
-                      onClick={() => setSelectedExpense(item)}
-                      color="bg-blue-500 hover:bg-blue-600"
-                      label="View"
-                    >
-                      <Eye size={16} />
-                    </IconBtn>
-
-                    <IconBtn
-                      onClick={() => setEditExpense(item)}
-                      color="bg-green-500 hover:bg-green-600"
-                      label="Edit"
-                    >
-                      <Pencil size={16} />
-                    </IconBtn>
-
-                    <IconBtn
-                      onClick={() => setDeleteId(item._id)}
-                      color="bg-red-500 hover:bg-red-600"
-                      label="Delete"
-                    >
-                      <Trash2 size={16} />
-                    </IconBtn>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="md:hidden space-y-3">
-        {filtered.map((item) => (
-          <div
-            key={item._id}
-            className="border rounded-lg p-4 flex flex-col gap-1 shadow-sm"
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="font-semibold">{item.title}</p>
-                <p className="text-sm text-gray-500">{item.category}</p>
-              </div>
-              <div className="flex gap-2">
-                <IconBtn
-                  onClick={() => setSelectedExpense(item)}
-                  color="bg-blue-500 hover:bg-blue-600"
-                  label="View"
-                >
-                  <Eye size={16} />
-                </IconBtn>
-
-                <IconBtn
-                  onClick={() => setEditExpense(item)}
-                  color="bg-green-500 hover:bg-green-600"
-                  label="Edit"
-                >
-                  <Pencil size={16} />
-                </IconBtn>
-
-                <IconBtn
-                  onClick={() => setDeleteId(item._id)}
-                  color="bg-red-500 hover:bg-red-600"
-                  label="Delete"
-                >
-                  <Trash2 size={16} />
-                </IconBtn>
-              </div>
+      <div className="bg-white rounded-card border border-black/5 shadow-card divide-y divide-black/5">
+        {settings.map((s) => (
+          <div key={s.id} className="flex items-center justify-between p-5">
+            <div className="pr-4">
+              <p className="text-sm font-medium text-ink">{s.label}</p>
+              <p className="text-xs text-slate mt-0.5">{s.description}</p>
             </div>
-
-            <div className="flex justify-between text-sm mt-2">
-              <span>रु {item.amount}</span>
-              <span className="text-gray-500">
-                {new Date(item.date).toLocaleDateString()}
-              </span>
-            </div>
+            <Toggle
+              checked={s.enabled}
+              onChange={() => toggle(s.id)}
+              label={s.label}
+            />
           </div>
         ))}
-
-        {filtered.length === 0 && (
-          <p className="text-center text-gray-500 py-6">
-            No transactions found
-          </p>
-        )}
       </div>
 
-      {selectedExpense && (
-        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm relative">
-            <button
-              onClick={() => setSelectedExpense(null)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
-              aria-label="Close"
-            >
-              <X size={20} />
-            </button>
+      <div className="bg-white rounded-card border border-black/5 shadow-card p-5">
+        <p className="text-sm font-medium text-ink">Export data</p>
+        <p className="text-xs text-slate mt-0.5 mb-3">
+          {loading
+            ? "Loading your transactions..."
+            : `Download everything as a CSV file${
+                transactions.length > 0
+                  ? ` (${transactions.length} transactions)`
+                  : ""
+              }.`}
+        </p>
+        <button
+          className="btn-ghost border border-black/10 disabled:opacity-50"
+          onClick={handleExport}
+          disabled={loading || transactions.length === 0}
+        >
+          Export as CSV
+        </button>
+      </div>
 
-            <h2 className="text-xl font-bold mb-4">Expense Details</h2>
-
-            <p>
-              <strong>Title:</strong> {selectedExpense.title}
-            </p>
-            <p>
-              <strong>Category:</strong> {selectedExpense.category}
-            </p>
-            <p>
-              <strong>Amount:</strong> रु {selectedExpense.amount}
-            </p>
-            <p>
-              <strong>Date:</strong>{" "}
-              {new Date(selectedExpense.date).toLocaleDateString()}
-            </p>
-
-            <button
-              onClick={() => setSelectedExpense(null)}
-              className="mt-5 w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-
-      {editExpense && (
-        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm relative">
-            <button
-              onClick={() => setEditExpense(null)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
-              aria-label="Close"
-            >
-              <X size={20} />
-            </button>
-
-            <h2 className="text-xl font-bold mb-4">Edit Expense</h2>
-
-            <input
-              className="border w-full p-2 mb-3 rounded"
-              value={editExpense.title}
-              onChange={(e) =>
-                setEditExpense({
-                  ...editExpense,
-                  title: e.target.value,
-                })
-              }
-            />
-
-            <input
-              type="number"
-              className="border w-full p-2 mb-3 rounded"
-              value={editExpense.amount}
-              onChange={(e) =>
-                setEditExpense({
-                  ...editExpense,
-                  amount: e.target.value,
-                })
-              }
-            />
-
-            <input
-              className="border w-full p-2 mb-3 rounded"
-              value={editExpense.category}
-              onChange={(e) =>
-                setEditExpense({
-                  ...editExpense,
-                  category: e.target.value,
-                })
-              }
-            />
-
-            <input
-              type="date"
-              className="border w-full p-2 mb-4 rounded"
-              value={editExpense.date?.substring(0, 10)}
-              onChange={(e) =>
-                setEditExpense({
-                  ...editExpense,
-                  date: e.target.value,
-                })
-              }
-            />
-
-            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
-              <button
-                onClick={() => setEditExpense(null)}
-                className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={updateExpense}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded"
-              >
-                Update
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {deleteId && (
-        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-xs shadow-lg">
-            <h2 className="text-xl font-bold text-red-600 mb-3">
-              Delete Expense
-            </h2>
-
-            <p className="text-gray-700 mb-6">
-              Are you sure you want to delete this expense?
-            </p>
-
-            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="px-5 py-2 rounded bg-gray-400 hover:bg-gray-500 text-white"
-              >
-                No
-              </button>
-
-              <button
-                onClick={() => deleteExpense(deleteId)}
-                className="px-5 py-2 rounded bg-red-600 hover:bg-red-700 text-white"
-              >
-                Yes
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <ToastContainer position="top-right" autoClose={2000} />
+      <div className="bg-white rounded-card border border-rust/20 shadow-card p-5">
+        <p className="text-sm font-medium text-rust">Danger zone</p>
+        <p className="text-xs text-slate mt-0.5 mb-3">
+          Permanently clear all transactions from your account.
+        </p>
+        <button
+          className="btn-danger disabled:opacity-50"
+          onClick={handleClearClick}
+          disabled={loading || clearing || transactions.length === 0}
+        >
+          {clearing
+            ? "Clearing..."
+            : confirmingClear
+              ? "Click again to confirm"
+              : "Clear all data"}
+        </button>
+      </div>
     </div>
+  );
+}
+
+function Toggle({ checked, onChange, label }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={onChange}
+      className={`w-11 h-6 rounded-full transition-colors shrink-0 relative
+        ${checked ? "bg-moss" : "bg-black/10"}`}
+    >
+      <span
+        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform
+          ${checked ? "translate-x-[22px]" : "translate-x-0.5"}`}
+      />
+    </button>
   );
 }
