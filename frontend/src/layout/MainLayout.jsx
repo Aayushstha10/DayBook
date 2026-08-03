@@ -9,7 +9,7 @@ const titles = {
     title: "Dashboard",
     subtitle: "A quick look at where your money went.",
   },
-  "/transactions": {
+  "/transaction": {
     title: "Transactions",
     subtitle: "Every expense, searchable and sortable.",
   },

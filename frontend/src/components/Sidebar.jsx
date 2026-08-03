@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 
 const links = [
@@ -10,25 +9,8 @@ const links = [
 ];
 
 export default function Sidebar({ open, onClose }) {
-  // Prevent background scrolling when sidebar is open
-  useEffect(() => {
-    if (open) {
-      document.documentElement.style.overflow = "hidden";
-      document.body.style.overflow = "hidden";
-    } else {
-      document.documentElement.style.overflow = "";
-      document.body.style.overflow = "";
-    }
-
-    return () => {
-      document.documentElement.style.overflow = "";
-      document.body.style.overflow = "";
-    };
-  }, [open]);
-
   return (
     <>
-      {/* Overlay */}
       {open && (
         <div
           className="fixed inset-0 z-30 bg-ink/50 md:hidden"
@@ -37,28 +19,30 @@ export default function Sidebar({ open, onClose }) {
         />
       )}
 
-      {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-ink text-paper flex flex-col
-        transform transition-transform duration-200 ease-in-out
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-ink text-paper flex flex-col
+        transform transition-transform duration-200
         md:translate-x-0 md:static
         ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
-        {/* Logo */}
-        <div className="px-6 py-6 border-b border-white/10">
-          <div className="flex items-baseline gap-2">
+        <div className="px-6 py-6 border-b border-white/10 relative z-50">
+          <NavLink
+            to="/dashboard"
+            onClick={onClose}
+            className="flex items-baseline gap-2 w-fit relative z-50 cursor-pointer"
+            style={{ pointerEvents: "auto" }}
+          >
             <span className="font-display text-2xl font-semibold tracking-tight">
               Daybook
             </span>
             <span className="text-gold text-xs font-mono">v1</span>
-          </div>
+          </NavLink>
 
           <p className="text-slate-light text-xs mt-1">
             Every Nepali Rupees, Accounted for.
           </p>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           {links.map(({ to, label, icon: Icon }) => (
             <NavLink
@@ -80,7 +64,6 @@ export default function Sidebar({ open, onClose }) {
           ))}
         </nav>
 
-        {/* Footer */}
         <div className="px-6 py-5 border-t border-white/10">
           <p className="text-xs text-slate-light leading-relaxed">
             Data lives only in this browser — nothing leaves your device.
@@ -91,7 +74,7 @@ export default function Sidebar({ open, onClose }) {
   );
 }
 
-// Dashboard Icon
+// Dashboard
 function LedgerIcon(props) {
   return (
     <svg
@@ -107,7 +90,7 @@ function LedgerIcon(props) {
   );
 }
 
-// Transactions Icon
+// Transactions
 function ListIcon(props) {
   return (
     <svg
@@ -122,7 +105,7 @@ function ListIcon(props) {
   );
 }
 
-// Profile Icon
+// Profile
 function UserIcon(props) {
   return (
     <svg
@@ -141,7 +124,7 @@ function UserIcon(props) {
   );
 }
 
-// Room Icon
+// Room
 function RoomIcon(props) {
   return (
     <svg
@@ -159,7 +142,7 @@ function RoomIcon(props) {
   );
 }
 
-// Settings Icon
+// Settings
 function GearIcon(props) {
   return (
     <svg
