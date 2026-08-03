@@ -20,23 +20,18 @@ export default function Sidebar({ open, onClose }) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 h-screen bg-ink text-paper flex flex-col overflow-hidden
-  transform transition-transform duration-200
-  md:translate-x-0 md:static
-  ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-ink text-paper flex flex-col
+        transform transition-transform duration-200
+        md:translate-x-0 md:static
+        ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="px-6 py-6 border-b border-white/10 relative z-50">
-          <NavLink
-            to="/dashboard"
-            onClick={onClose}
-            className="flex items-baseline gap-2 w-fit relative z-50 cursor-pointer"
-            style={{ pointerEvents: "auto" }}
-          >
+        <div className="px-6 py-6 border-b border-white/10">
+          <div className="flex items-baseline gap-2">
             <span className="font-display text-2xl font-semibold tracking-tight">
               Daybook
             </span>
             <span className="text-gold text-xs font-mono">v1</span>
-          </NavLink>
+          </div>
 
           <p className="text-slate-light text-xs mt-1">
             Every Nepali Rupees, Accounted for.
