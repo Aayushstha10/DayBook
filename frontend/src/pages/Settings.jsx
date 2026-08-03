@@ -122,10 +122,10 @@ export default function Settings() {
         return;
       }
 
-      const headers = ["Date", "Merchant", "Category", "Amount"];
+      const headers = ["Date", "Title", "Category", "Amount"];
       const rows = transactions.map((t) => [
         t.date,
-        t.merchant,
+        t.title,
         t.category,
         Number(t.amount).toFixed(2),
       ]);
@@ -164,21 +164,36 @@ export default function Settings() {
     setConfirmingClear(false);
     setClearing(true);
 
-    try {
-      await axios.delete(EXPENSES_URL, {
-        headers: getAuthHeader(),
-      });
+    // This API has no bulk-delete endpoint — only DELETE /expenses/:id
+    // (see Transactions.jsx) — so clear everything by deleting each
+    // transaction individually.
+    const idsToDelete = transactions.map((t) => t._id);
+    const results = await Promise.allSettled(
+      idsToDelete.map((id) =>
+        axios.delete(`${EXPENSES_URL}/${id}`, { headers: getAuthHeader() }),
+      ),
+    );
 
+    const failedCount = results.filter((r) => r.status === "rejected").length;
+
+    if (failedCount === 0) {
       setTransactions([]);
       showStatus("success", "All transactions cleared.");
-    } catch (err) {
+      // Let any other mounted views (e.g. the Transactions page) know
+      // the data changed so they can refetch instead of showing stale data.
+      window.dispatchEvent(new Event("expenses:changed"));
+    } else if (failedCount === idsToDelete.length) {
+      showStatus("error", "Failed to clear transactions.");
+    } else {
       showStatus(
         "error",
-        err.response?.data?.message || "Failed to clear transactions.",
+        `Cleared ${idsToDelete.length - failedCount} of ${idsToDelete.length}. Some failed — try again.`,
       );
-    } finally {
-      setClearing(false);
     }
+
+    // Re-sync with the server in case some deletes failed partway through
+    await fetchTransactions();
+    setClearing(false);
   };
 
   return (

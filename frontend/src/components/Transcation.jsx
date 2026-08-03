@@ -40,6 +40,7 @@ const Transaction = () => {
     return transactions.filter((item) => {
       const title = item.title?.toLowerCase() || "";
       const category = item.category?.toLowerCase() || "";
+
       return (
         title.includes(search.toLowerCase()) ||
         category.includes(search.toLowerCase())
@@ -71,7 +72,7 @@ const Transaction = () => {
         <h1 className="text-xl xs:text-2xl sm:text-3xl font-bold truncate">
           My Transactions
         </h1>
-
+        
         <button
           onClick={getExpenses}
           className="shrink-0 p-2.5 sm:p-3 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 transition duration-300 shadow-md hover:rotate-180"
