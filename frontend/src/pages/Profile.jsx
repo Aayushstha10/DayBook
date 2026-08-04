@@ -16,7 +16,7 @@ export default function Profile() {
   const user = JSON.parse(localStorage.getItem("user"));
 
   return (
-    <div className="max-w-xl space-y-6">
+    <div className="bg-slate-100 max-w-xl space-y-6">
       <div className="bg-white rounded-card border border-black/5 shadow-card p-6">
         <div className="flex items-center gap-4 mb-6">
           {user?.picture ? (

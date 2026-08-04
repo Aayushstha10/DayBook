@@ -107,7 +107,7 @@ export default function Transactions() {
 
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-100">
+          <thead className="bg-gray-200">
             <tr>
               <th className="p-3 text-left">Title</th>
               <th className="p-3 text-left">Category</th>

@@ -17,7 +17,7 @@ exports.googleLogin = async (req, res) => {
 
     const { email, name, picture, sub: googleId } = payload;
 
-    const ADMIN_EMAIL = "aayushshrestha003@gmail.com";
+    const ADMIN_EMAIL = "aayushshrestha003@gmail.com" ||"barsha@gmail.com";
 
     let user = await User.findOne({ email });
 
