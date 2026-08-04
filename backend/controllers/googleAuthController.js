@@ -17,7 +17,7 @@ exports.googleLogin = async (req, res) => {
 
     const { email, name, picture, sub: googleId } = payload;
 
-    const ADMIN_EMAIL = "aayushshrestha003@gmail.com" ||"barsha@gmail.com";
+    const ADMIN_EMAILS = ["aayushshrestha003@gmail.com", "barsha@gmail.com"];
 
     let user = await User.findOne({ email });
 
@@ -29,9 +29,7 @@ exports.googleLogin = async (req, res) => {
         googleId,
         authProvider: "google",
         role:
-          email.toLowerCase() === ADMIN_EMAIL.toLowerCase()
-            ? "admin"
-            : "user",
+          email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? "admin" : "user",
       });
     } else {
       if (!user.googleId) {
@@ -56,7 +54,7 @@ exports.googleLogin = async (req, res) => {
       process.env.secret,
       {
         expiresIn: "7d",
-      }
+      },
     );
 
     res.status(200).json({
