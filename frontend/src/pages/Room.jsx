@@ -239,7 +239,9 @@ export default function ExpenseSummary() {
 
                     <div className="min-w-0">
                       <h2 className="font-semibold truncate">{user.name}</h2>
-                      <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                      <p className="text-sm text-gray-500 truncate">
+                        {user.email}
+                      </p>
                     </div>
                   </div>
 
@@ -274,7 +276,10 @@ export default function ExpenseSummary() {
                   {open && (
                     <div className="mt-4 border-t pt-3 space-y-3">
                       {user.items.map((item) => (
-                        <div key={item._id} className="flex justify-between gap-2">
+                        <div
+                          key={item._id}
+                          className="flex justify-between gap-2"
+                        >
                           <div className="min-w-0">
                             <p className="font-medium truncate">{item.title}</p>
 
