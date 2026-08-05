@@ -121,8 +121,8 @@ const AddExpense = ({ onAddExpense }) => {
                 className="w-full border rounded-lg px-4 py-2"
                 minLength={2}
                 maxLength={50}
-                pattern="[A-Za-z0-9 ]+"
-                title="Title can only contain letters, numbers, and spaces"
+                pattern="[A-Za-z]+"
+                title="Title can only contain letters"
               />
 
               <input
