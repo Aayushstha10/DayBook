@@ -29,9 +29,7 @@ exports.googleLogin = async (req, res) => {
         googleId,
         authProvider: "google",
         role:
-          email.toLowerCase() === ADMIN_EMAIL.toLowerCase()
-            ? "admin"
-            : "user",
+          email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? "admin" : "user",
       });
     } else {
       if (!user.googleId) {
@@ -56,7 +54,7 @@ exports.googleLogin = async (req, res) => {
       process.env.secret,
       {
         expiresIn: "7d",
-      }
+      },
     );
 
     res.status(200).json({
