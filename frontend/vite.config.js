@@ -50,7 +50,7 @@ export default defineConfig({
 
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/daybook-j903\.onrender\.com\/api/,
+            urlPattern: "https://day-book-eta.vercel.app/api",
             handler: "NetworkFirst",
             options: {
               cacheName: "api-cache",
