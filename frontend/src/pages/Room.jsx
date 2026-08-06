@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import api from "../api"
+import api from "../api";
 import { Search, Receipt, AlertCircle, ChevronDown, X } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 
@@ -111,7 +111,7 @@ export default function ExpenseSummary() {
     try {
       const token = localStorage.getItem("token");
 
-      await axios.delete(`${API}/${id}`, {
+      await api.delete(`${API}/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -130,9 +130,6 @@ export default function ExpenseSummary() {
     try {
       const token = localStorage.getItem("token");
 
-      // Only send the editable fields — sending the whole populated
-      // object (including nested user) back to the API can confuse
-      // the update route on the backend.
       const payload = {
         title: editExpense.title,
         amount: editExpense.amount,
@@ -154,10 +151,7 @@ export default function ExpenseSummary() {
             ? {
                 ...item,
                 ...updated,
-                // Keep the original populated user if the update
-                // response doesn't return one, so this item stays
-                // grouped under the correct person instead of
-                // falling into "Unknown User".
+
                 user:
                   updated?.user && updated.user.email
                     ? updated.user

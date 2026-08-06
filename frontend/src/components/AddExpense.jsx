@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import axios from "axios";
+import api from "../api";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -64,7 +64,7 @@ const AddExpense = ({ onAddExpense }) => {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await axios.post(
+      const response = await api.post(
         "https://daybook-j903.onrender.com/api/expenses",
         newExpense,
         {

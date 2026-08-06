@@ -36,7 +36,7 @@ export default function Transactions() {
     try {
       const token = localStorage.getItem("token");
 
-      await axios.delete(`${API}/${id}`, {
+      await api.delete(`${API}/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -54,7 +54,7 @@ export default function Transactions() {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await axios.put(`${API}/${editExpense._id}`, editExpense, {
+      const res = await api.put(`${API}/${editExpense._id}`, editExpense, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

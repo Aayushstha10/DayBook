@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { FiRefreshCw, FiSearch } from "react-icons/fi";
 import { ToastContainer, toast } from "react-toastify";
+import api from "../api"
 
 const Transaction = () => {
   const [search, setSearch] = useState("");
@@ -18,7 +18,7 @@ const Transaction = () => {
 
       const token = localStorage.getItem("token");
 
-      const res = await axios.get(
+      const res = await api.get(
         "https://daybook-j903.onrender.com/api/expenses",
         {
           headers: {
