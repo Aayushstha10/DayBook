@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import api from "../api"
 import { Search, Receipt, AlertCircle, ChevronDown, X } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 
@@ -37,7 +37,7 @@ export default function ExpenseSummary() {
       setLoading(true);
       setError("");
 
-      const res = await axios.get(
+      const res = await api.get(
         "https://daybook-j903.onrender.com/api/allexpenses",
       );
 

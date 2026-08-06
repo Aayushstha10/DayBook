@@ -8,11 +8,7 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
 
-      includeAssets: [
-        "favicon.ico",
-        "apple-touch-icon.png",
-        "mask-icon.svg",
-      ],
+      includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],
 
       manifest: {
         name: "Daybook",
@@ -45,21 +41,27 @@ export default defineConfig({
         ],
       },
 
-     workbox: {
-  globPatterns: [
-    "**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,json}",
-  ],
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,json}"],
 
-  runtimeCaching: [
-    {
-      urlPattern: /^https:\/\/daybook-j903\.onrender\.com\/api/,
-      handler: "NetworkFirst",
-      options: {
-        cacheName: "api-cache",
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/daybook-j903\.onrender\.com\/api/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-cache",
+              networkTimeoutSeconds: 5,
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24, // 1 day
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       },
-    },
-  ],
-},
     }),
   ],
 });

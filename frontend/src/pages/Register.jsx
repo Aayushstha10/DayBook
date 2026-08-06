@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../api"
 import { ToastContainer, toast } from "react-toastify";
 
 export default function Register() {
@@ -31,7 +31,7 @@ export default function Register() {
     }
 
     try {
-      const response = await axios.post(
+      const response = await api.post(
         "https://daybook-j903.onrender.com/api/signup",
         form,
       );

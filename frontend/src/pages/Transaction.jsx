@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../api"
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Eye, Pencil, Trash2, X } from "lucide-react";
@@ -20,7 +20,7 @@ export default function Transactions() {
   const fetchExpenses = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(API, {
+      const res = await api.get(API, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
