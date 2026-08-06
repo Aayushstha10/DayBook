@@ -9,14 +9,11 @@ import NotFound from "./pages/NotFound.jsx";
 import ProtectedRoute from "./pages/ProtectedRoute.jsx";
 import Transaction from "./pages/Transaction.jsx";
 import Room from "./pages/Room.jsx";
-import InstallPWA from "./pages/Install.jsx";
 
 export default function App() {
   return (
     <>
-      <div>
-        <InstallPWA />
-      </div>
+      
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
