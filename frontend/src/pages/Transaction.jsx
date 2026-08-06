@@ -274,7 +274,7 @@ export default function Transactions() {
                 })
               }
             />
-
+            
             <input
               type="number"
               className="border w-full p-2 mb-3 rounded"

@@ -13,13 +13,13 @@ const googleroute = require("./routes/google");
 const expensesroute = require("./routes/expenses");
 const roomroute = require("./routes/room");
 
-
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
   "http://localhost:5174",
   "http://localhost:5173",
+  " http://localhost:4173",
   "https://day-book-eta.vercel.app",
 ];
 
@@ -27,7 +27,7 @@ app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
-  })
+  }),
 );
 
 app.use(express.json());
@@ -53,4 +53,4 @@ mongoose
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-}); 
+});
