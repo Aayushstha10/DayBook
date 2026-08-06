@@ -45,19 +45,21 @@ export default defineConfig({
         ],
       },
 
-      workbox: {
-        globPatterns: ["**/*.{js,css,html,png,svg,ico}"],
+     workbox: {
+  globPatterns: [
+    "**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,json}",
+  ],
 
-        runtimeCaching: [
-          {
-            urlPattern: "https://day-book-eta.vercel.app/api",
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "api-cache",
-            },
-          },
-        ],
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/daybook-j903\.onrender\.com\/api/,
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "api-cache",
       },
+    },
+  ],
+},
     }),
   ],
 });
