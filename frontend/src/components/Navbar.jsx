@@ -75,7 +75,10 @@ export default function Navbar({ onMenuClick }) {
               </p>
             </div>
           </div>
-         
+          <div>
+            <InstallPWA />
+          </div>
+
           <button
             onClick={handleLogout}
             className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 md:px-4 rounded-lg transition shrink-0 text-sm md:text-base"
