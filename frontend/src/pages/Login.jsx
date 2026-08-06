@@ -166,12 +166,21 @@ export default function Login() {
             <div className="h-px flex-1 bg-ink/10" />
           </div>
 
-          <div className="flex justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              width="320"
-            />
+          <div className="w-full">
+            <div className="flex justify-center overflow-hidden">
+              <div className="w-full max-w-sm">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  theme="outline"
+                  shape="pill"
+                  text="continue_with"
+                  size="large"
+                  width="100%"
+                  useOneTap={false}
+                />
+              </div>
+            </div>
           </div>
 
           <p className="text-sm text-slate mt-6 text-center">
