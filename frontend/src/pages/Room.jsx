@@ -180,7 +180,7 @@ export default function Room() {
             </div>
             <div>
               <h1 className="font-display text-2xl font-semibold" style={{ color: tokens.ink }}>
-                Room Ledger
+                Daybook
               </h1>
               <p className="text-sm" style={{ color: tokens.muted }}>
                 Track shared spending, split evenly, settle up
