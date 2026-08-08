@@ -1,29 +1,33 @@
-const expenses = require("../models/Expenses");
+const Expense = require("../models/Expenses");
 
-const expen = async (req, res) => {
+const createExpense = async (req, res) => {
   try {
     const { title, amount, category, date } = req.body;
 
-    const edetails = await expenses.create({
+    const expense = await Expense.create({
       title,
       amount,
       category,
       date,
       user: req.user.id,
+      room: req.params.roomId || null,
     });
-    res.status(200).json({
-      message: "expenses create successfully",
-      edetails: {
-        title: edetails.title,
-        amount: edetails.amount,
-        category: edetails.category,
-        date: edetails.date,
-       
-      },
+
+    const populatedExpense = await expense.populate("user", "name email");
+
+    res.status(201).json({
+      success: true,
+      message: "Expense created successfully",
+      expense: populatedExpense,
     });
   } catch (err) {
-    console.log("error", err.message);
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 
-module.exports = expen;
+module.exports = createExpense;

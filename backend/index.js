@@ -11,7 +11,8 @@ const signuproute = require("./routes/signup");
 const googleroute = require("./routes/google");
 
 const expensesroute = require("./routes/expenses");
-const roomroute = require("./routes/room");
+const roomRoutes = require("./routes/room");
+   
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -39,7 +40,7 @@ app.use("/api", loginroute);
 app.use("/api", googleroute);
 
 // Public room expenses
-app.use("/api", roomroute);
+ app.use("/api", roomRoutes);
 
 // Protected expense routes
 app.use("/api", auth, expensesroute);

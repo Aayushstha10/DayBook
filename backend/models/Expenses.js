@@ -22,17 +22,21 @@ const expensesSchema = new mongoose.Schema(
       required: [true, "Category is required"],
       trim: true,
     },
+    room: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Room",
+      required: true,
+    },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
 
     date: {
       type: Date,
       required: [true, "Date is required"],
       max: [Date.now, "Future dates are not allowed"],
-    },
-
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
     },
   },
   {

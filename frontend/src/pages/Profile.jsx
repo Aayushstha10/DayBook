@@ -63,9 +63,6 @@ export default function Profile() {
                 onChange={handleChange("currency")}
                 className="input"
               >
-                {/* <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option> */}
                 <option value="NPR">NPR (रु)</option>
               </select>
             </Field>
@@ -75,8 +72,6 @@ export default function Profile() {
                 onChange={handleChange("timezone")}
                 className="input"
               >
-                {/* <option value="America/New_York">Eastern Time</option>
-                <option value="America/Los_Angeles">Pacific Time</option> */}
                 <option value="Asia/Kathmandu">Kathmandu</option>
                 {/* <option value="Europe/London">London</option> */}
               </select>
