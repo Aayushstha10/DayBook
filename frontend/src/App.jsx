@@ -28,7 +28,7 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/transaction" element={<Transaction />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/room/:id" element={<Room />} />
+          <Route path="/room" element={<Room />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
 

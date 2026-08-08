@@ -1,719 +1,1550 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api";
+import { toast } from "react-toastify";
 import {
-  Receipt,
-  AlertCircle,
-  Lock,
+  ArrowLeft,
   Plus,
-  X,
-  UserPlus,
-  Trash2,
-  Pencil,
   Users,
+  Receipt,
+  Wallet,
+  UserPlus,
+  X,
+  Calendar,
+  ChevronDown,
+  Split,
+  Trash2,
+  Loader2,
+  Search,
+  Utensils,
+  Car,
+  ShoppingBag,
+  FileText,
+  Gamepad2,
+  MoreHorizontal,
+  ShieldCheck,
 } from "lucide-react";
-import { ToastContainer, toast } from "react-toastify";
 
+const API = "https://daybook-j903.onrender.com/api";
 
-const BASE = "https://daybook-j903.onrender.com/api";
+const categories = [
+  {
+    name: "Food",
+    icon: Utensils,
+  },
+  {
+    name: "Travel",
+    icon: Car,
+  },
+  {
+    name: "Shopping",
+    icon: ShoppingBag,
+  },
+  {
+    name: "Bills",
+    icon: FileText,
+  },
+  {
+    name: "Entertainment",
+    icon: Gamepad2,
+  },
+  {
+    name: "Others",
+    icon: MoreHorizontal,
+  },
+];
 
-function formatAmount(n) {
-  return Number(n).toLocaleString(undefined, {
+function formatAmount(amount) {
+  return Number(amount || 0).toLocaleString("en-NP", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }
 
-function initials(name) {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/);
-  return (parts[0][0] + (parts[1]?.[0] || "")).toUpperCase();
+function formatDate(date) {
+  if (!date) return "-";
+
+  return new Date(date).toLocaleDateString("en-NP", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
-function getCurrentUserEmail() {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return null;
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.email || payload.user?.email || null;
-  } catch {
-    return null;
-  }
+function getInitials(name = "") {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+}
+
+function getCategoryIcon(category) {
+  const found = categories.find((item) => item.name === category);
+
+  if (!found) return MoreHorizontal;
+
+  return found.icon;
 }
 
 export default function Room() {
-  const { id:roomId } = useParams(); // adjust if you're using a different router setup
+  const { id, roomId } = useParams();
+  const currentRoomId = roomId || id;
+
+  const navigate = useNavigate();
+  const dateRef = useRef(null);
 
   const [room, setRoom] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [members, setMembers] = useState([]);
   const [expenses, setExpenses] = useState([]);
 
   const [loading, setLoading] = useState(true);
-  const [forbidden, setForbidden] = useState(false);
-  const [error, setError] = useState("");
+  const [expenseLoading, setExpenseLoading] = useState(false);
+  const [memberLoading, setMemberLoading] = useState(false);
 
-  const [showAddExpense, setShowAddExpense] = useState(false);
-  const [showAddMember, setShowAddMember] = useState(false);
-  const [editingExpense, setEditingExpense] = useState(null); // expense object or null
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showMemberModal, setShowMemberModal] = useState(false);
 
-  const [newExpense, setNewExpense] = useState({
+  const [search, setSearch] = useState("");
+
+  const [memberEmail, setMemberEmail] = useState("");
+
+  const [expense, setExpense] = useState({
     title: "",
     amount: "",
     category: "",
     date: "",
+    split: false,
+    splitMembers: [],
   });
-  const [editForm, setEditForm] = useState({
-    title: "",
-    amount: "",
-    category: "",
-    date: "",
-    splitAmong: [], // emails
-  });
-  const [newMemberEmail, setNewMemberEmail] = useState("");
 
   const token = localStorage.getItem("token");
-  const authHeaders = { Authorization: `Bearer ${token}` };
-  const currentUserEmail = useMemo(() => getCurrentUserEmail(), []);
+
+  const authConfig = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+
+  // -----------------------------------------
+  // BODY SCROLL LOCK
+  // -----------------------------------------
 
   useEffect(() => {
-    fetchRoomAndExpenses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId]);
+    const modalOpen = showExpenseModal || showMemberModal;
 
-  const fetchRoomAndExpenses = async () => {
+    document.body.style.overflow = modalOpen ? "hidden" : "auto";
+
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [showExpenseModal, showMemberModal]);
+
+  // -----------------------------------------
+  // LOAD ROOM
+  // -----------------------------------------
+
+  const loadRoom = async () => {
     try {
       setLoading(true);
-      setError("");
-      setForbidden(false);
 
-      const roomRes = await api.get(`${BASE}/rooms/${roomId}`, {
-        headers: authHeaders,
-      });
+      const response = await api.get(
+        `${API}/rooms/${currentRoomId}`,
+        authConfig
+      );
 
-      setRoom(roomRes.data.room);
-      setIsAdmin(roomRes.data.isAdmin);
+      setRoom(response.data.room);
+    } catch (error) {
+      console.error(error.response?.data || error.message);
 
-      const expRes = await api.get(`${BASE}/rooms/${roomId}/expenses`, {
-        headers: authHeaders,
-      });
+      toast.error(
+        error.response?.data?.message || "Failed to load room"
+      );
 
-      setExpenses(expRes.data.expenses || []);
-    } catch (err) {
-      console.error(err);
-      if (err.response?.status === 403) {
-        setForbidden(true);
-      } else if (err.response?.status === 404) {
-        setError("Room not found.");
-      } else {
-        setError("Couldn't load this room.");
-      }
+      navigate("/dashboard");
     } finally {
       setLoading(false);
     }
   };
 
-  // Everyone who a new expense can be split among: the admin (room creator)
-  // plus every member who has actually joined (pending invites don't share
-  // the bill yet).
-  const allParticipantEmails = useMemo(() => {
-    if (!room) return [];
-    const emails = new Set(
-      (room.members || [])
-        .filter((m) => m.status === "joined")
-        .map((m) => m.email)
-    );
-    if (room.admin?.email) {
-      emails.add(room.admin.email);
-    } else if (isAdmin && currentUserEmail) {
-      emails.add(currentUserEmail);
-    }
-    return [...emails];
-  }, [room, isAdmin, currentUserEmail]);
+  // -----------------------------------------
+  // LOAD MEMBERS
+  // -----------------------------------------
 
-  // group expenses by member, same pattern as ExpenseSummary
-  const summaries = useMemo(() => {
-    const map = new Map();
-
-    expenses.forEach((exp) => {
-      const email = exp.user?.email || "unknown";
-      const name = exp.user?.name || "Unknown User";
-      const amount = Number(exp.amount) || 0;
-
-      if (!map.has(email)) {
-        map.set(email, { name, email, count: 0, total: 0, items: [] });
-      }
-
-      const item = map.get(email);
-      item.count++;
-      item.total += amount;
-      item.items.push(exp);
-    });
-
-    return [...map.values()].sort((a, b) => b.total - a.total);
-  }, [expenses]);
-
-  const roomTotal = useMemo(
-    () => expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0),
-    [expenses]
-  );
-
-  const canEditExpense = (exp) =>
-    isAdmin || (currentUserEmail && exp.user?.email === currentUserEmail);
-
-  const splitPreview = (amount, participants) => {
-    const n = participants?.length || allParticipantEmails.length || 1;
-    const total = Number(amount) || 0;
-    return n > 0 ? total / n : total;
-  };
-
-  const createExpense = async () => {
-    if (!newExpense.title || !newExpense.amount) {
-      toast.error("Title and amount are required");
-      return;
-    }
-
+  const loadMembers = async () => {
     try {
-      const res = await api.post(
-        `${BASE}/rooms/${roomId}/expenses`,
-        {
-          ...newExpense,
-          splitAmong: allParticipantEmails,
-        },
-        { headers: authHeaders }
+      const response = await api.get(
+        `${API}/rooms/${currentRoomId}/members`,
+        authConfig
       );
 
-      setExpenses((prev) => [res.data.expense, ...prev]);
-      setNewExpense({ title: "", amount: "", category: "", date: "" });
-      setShowAddExpense(false);
-      toast.success("Expense added");
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "Failed to add expense");
+      setMembers(response.data.members || []);
+    } catch (error) {
+      console.error(error.response?.data || error.message);
     }
   };
 
-  const openEditExpense = (exp) => {
-    if (!canEditExpense(exp)) return;
-    setEditingExpense(exp);
-    setEditForm({
-      title: exp.title || "",
-      amount: exp.amount ?? "",
-      category: exp.category || "",
-      date: exp.date ? exp.date.slice(0, 10) : "",
-      splitAmong:
-        exp.splitAmong && exp.splitAmong.length
-          ? exp.splitAmong
-          : allParticipantEmails,
-    });
+  // -----------------------------------------
+  // LOAD EXPENSES
+  // -----------------------------------------
+
+  const loadExpenses = async () => {
+    try {
+      setExpenseLoading(true);
+
+      const response = await api.get(
+        `${API}/rooms/${currentRoomId}/expenses`,
+        authConfig
+      );
+
+      setExpenses(response.data.expenses || []);
+    } catch (error) {
+      console.error(error.response?.data || error.message);
+
+      // If your backend currently uses /api/expenses
+      // you can change the endpoint here.
+      setExpenses([]);
+    } finally {
+      setExpenseLoading(false);
+    }
   };
 
-  const toggleEditSplitMember = (email) => {
-    setEditForm((prev) => {
-      const has = prev.splitAmong.includes(email);
-      const next = has
-        ? prev.splitAmong.filter((e) => e !== email)
-        : [...prev.splitAmong, email];
-      return { ...prev, splitAmong: next };
-    });
-  };
-
-  const updateExpense = async () => {
-    if (!editingExpense) return;
-    if (!editForm.title || !editForm.amount) {
-      toast.error("Title and amount are required");
+  useEffect(() => {
+    if (!currentRoomId) {
+      navigate("/dashboard");
       return;
     }
-    if (isAdmin && editForm.splitAmong.length === 0) {
-      toast.error("Pick at least one member to split with");
+
+    loadRoom();
+    loadMembers();
+    loadExpenses();
+  }, [currentRoomId]);
+
+  // -----------------------------------------
+  // ADMIN CHECK
+  // -----------------------------------------
+
+  const currentUser = JSON.parse(
+    localStorage.getItem("user") || "{}"
+  );
+
+  const isAdmin = useMemo(() => {
+    if (!room || !currentUser?._id) return false;
+
+    const adminId =
+      typeof room.admin === "object"
+        ? room.admin?._id
+        : room.admin;
+
+    return adminId === currentUser._id;
+  }, [room, currentUser?._id]);
+
+  // -----------------------------------------
+  // EXPENSE CHANGE
+  // -----------------------------------------
+
+  const handleExpenseChange = (e) => {
+    const { name, value } = e.target;
+
+    setExpense((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // -----------------------------------------
+  // DATE PICKER
+  // -----------------------------------------
+
+  const openDatePicker = () => {
+    if (dateRef.current?.showPicker) {
+      dateRef.current.showPicker();
+    } else {
+      dateRef.current?.focus();
+    }
+  };
+
+  // -----------------------------------------
+  // SPLIT TOGGLE
+  // -----------------------------------------
+
+  const handleSplitToggle = () => {
+    setExpense((prev) => ({
+      ...prev,
+      split: !prev.split,
+      splitMembers: !prev.split
+        ? members.map((member) => member.email)
+        : [],
+    }));
+  };
+
+  // -----------------------------------------
+  // SELECT SPLIT MEMBER
+  // -----------------------------------------
+
+  const toggleSplitMember = (email) => {
+    setExpense((prev) => {
+      const exists = prev.splitMembers.includes(email);
+
+      return {
+        ...prev,
+        splitMembers: exists
+          ? prev.splitMembers.filter((item) => item !== email)
+          : [...prev.splitMembers, email],
+      };
+    });
+  };
+
+  // -----------------------------------------
+  // ADD EXPENSE
+  // -----------------------------------------
+
+  const handleSubmitExpense = async (e) => {
+    e.preventDefault();
+
+    if (!expense.title.trim()) {
+      toast.error("Please enter expense title");
+      return;
+    }
+
+    if (!expense.amount || Number(expense.amount) <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+
+    if (!expense.category) {
+      toast.error("Please select a category");
+      return;
+    }
+
+    if (!expense.date) {
+      toast.error("Please select a date");
+      return;
+    }
+
+    if (
+      expense.split &&
+      expense.splitMembers.length === 0
+    ) {
+      toast.error("Select at least one member for split");
       return;
     }
 
     try {
-      const res = await api.put(
-        `${BASE}/rooms/${roomId}/expenses/${editingExpense._id}`,
+      setExpenseLoading(true);
+
+      const payload = {
+        title: expense.title.trim(),
+        amount: Number(expense.amount),
+        category: expense.category,
+        date: expense.date,
+
+        roomId: currentRoomId,
+
+        split: expense.split,
+
+        splitMembers: expense.split
+          ? expense.splitMembers
+          : [],
+      };
+
+      const response = await api.post(
+        `${API}/rooms/${currentRoomId}/expenses`,
+        payload,
+        authConfig
+      );
+
+      const createdExpense =
+        response.data.expense || response.data;
+
+      setExpenses((prev) => [
+        createdExpense,
+        ...prev,
+      ]);
+
+      setExpense({
+        title: "",
+        amount: "",
+        category: "",
+        date: "",
+        split: false,
+        splitMembers: [],
+      });
+
+      setShowExpenseModal(false);
+
+      toast.success("Expense added successfully");
+    } catch (error) {
+      console.error(
+        error.response?.data || error.message
+      );
+
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to add expense"
+      );
+    } finally {
+      setExpenseLoading(false);
+    }
+  };
+
+  // -----------------------------------------
+  // ADD MEMBER
+  // -----------------------------------------
+
+  const handleAddMember = async (e) => {
+    e.preventDefault();
+
+    if (!memberEmail.trim()) {
+      toast.error("Enter member email");
+      return;
+    }
+
+    if (!memberEmail.includes("@")) {
+      toast.error("Enter a valid email");
+      return;
+    }
+
+    try {
+      setMemberLoading(true);
+
+      const response = await api.post(
+        `${API}/rooms/${currentRoomId}/members`,
         {
-          title: editForm.title,
-          amount: editForm.amount,
-          category: editForm.category,
-          date: editForm.date,
-          splitAmong: editForm.splitAmong,
+          email: memberEmail.trim().toLowerCase(),
         },
-        { headers: authHeaders }
+        authConfig
+      );
+
+      if (response.data.room) {
+        setRoom(response.data.room);
+      }
+
+      await loadMembers();
+
+      setMemberEmail("");
+      setShowMemberModal(false);
+
+      toast.success("Member added successfully");
+    } catch (error) {
+      console.error(
+        error.response?.data || error.message
+      );
+
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to add member"
+      );
+    } finally {
+      setMemberLoading(false);
+    }
+  };
+
+  // -----------------------------------------
+  // REMOVE MEMBER
+  // -----------------------------------------
+
+  const handleRemoveMember = async (email) => {
+    if (!isAdmin) {
+      toast.error("Only admin can remove members");
+      return;
+    }
+
+    const confirmRemove = window.confirm(
+      `Remove ${email} from this room?`
+    );
+
+    if (!confirmRemove) return;
+
+    try {
+      await api.delete(
+        `${API}/rooms/${currentRoomId}/members`,
+        {
+          ...authConfig,
+          data: {
+            email,
+          },
+        }
+      );
+
+      await loadMembers();
+
+      toast.success("Member removed successfully");
+    } catch (error) {
+      console.error(
+        error.response?.data || error.message
+      );
+
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to remove member"
+      );
+    }
+  };
+
+  // -----------------------------------------
+  // DELETE EXPENSE
+  // -----------------------------------------
+
+  const handleDeleteExpense = async (expenseId) => {
+    if (!isAdmin) {
+      toast.error("Only admin can delete expenses");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this expense?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await api.delete(
+        `${API}/rooms/${currentRoomId}/expenses/${expenseId}`,
+        authConfig
       );
 
       setExpenses((prev) =>
-        prev.map((e) => (e._id === editingExpense._id ? res.data.expense : e))
+        prev.filter((item) => item._id !== expenseId)
       );
-      setEditingExpense(null);
-      toast.success("Expense updated");
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "Failed to update expense");
-    }
-  };
 
-  const deleteExpense = async (exp) => {
-    if (!canEditExpense(exp)) return;
-    if (!window.confirm(`Delete "${exp.title}"? This can't be undone.`)) return;
-
-    try {
-      await api.delete(`${BASE}/rooms/${roomId}/expenses/${exp._id}`, {
-        headers: authHeaders,
-      });
-      setExpenses((prev) => prev.filter((e) => e._id !== exp._id));
       toast.success("Expense deleted");
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "Failed to delete expense");
-    }
-  };
-
-  const addMember = async () => {
-    if (!newMemberEmail.trim()) return;
-
-    try {
-      const res = await api.post(
-        `${BASE}/rooms/${roomId}/members`,
-        { email: newMemberEmail.trim() },
-        { headers: authHeaders }
+    } catch (error) {
+      console.error(
+        error.response?.data || error.message
       );
 
-      setRoom(res.data.room);
-      setNewMemberEmail("");
-      toast.success("Member added");
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "Failed to add member");
-    }
-  };
-
-  const removeMember = async (email) => {
-    try {
-      const res = await api.delete(
-        `${BASE}/rooms/${roomId}/members/${encodeURIComponent(email)}`,
-        { headers: authHeaders }
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to delete expense"
       );
-
-      setRoom(res.data.room);
-      toast.success("Member removed");
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "Failed to remove member");
     }
   };
+
+  // -----------------------------------------
+  // FILTER EXPENSES
+  // -----------------------------------------
+
+  const filteredExpenses = useMemo(() => {
+    const value = search.toLowerCase().trim();
+
+    if (!value) return expenses;
+
+    return expenses.filter((item) => {
+      return (
+        item.title?.toLowerCase().includes(value) ||
+        item.category?.toLowerCase().includes(value) ||
+        item.createdBy?.name
+          ?.toLowerCase()
+          .includes(value)
+      );
+    });
+  }, [expenses, search]);
+
+  // -----------------------------------------
+  // TOTAL
+  // -----------------------------------------
+
+  const totalExpense = useMemo(() => {
+    return expenses.reduce(
+      (total, item) => total + Number(item.amount || 0),
+      0
+    );
+  }, [expenses]);
+
+  const averageExpense = useMemo(() => {
+    if (!expenses.length) return 0;
+
+    return totalExpense / expenses.length;
+  }, [totalExpense, expenses.length]);
+
+  // -----------------------------------------
+  // LOADING
+  // -----------------------------------------
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Loading room...
+      <div className="min-h-screen bg-[#f5f7f3] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-[#637b55]" />
+          <p className="text-gray-500">
+            Loading room...
+          </p>
+        </div>
       </div>
     );
   }
 
-  if (forbidden) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-center px-4">
-        <Lock className="text-red-500" size={40} />
-        <h1 className="text-xl font-bold">Access denied</h1>
-        <p className="text-gray-500">
-          You're not a member of this room. Ask the admin to add your email.
-        </p>
-      </div>
-    );
+  if (!room) {
+    return null;
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-center px-4">
-        <AlertCircle className="text-red-500" size={40} />
-        <p className="text-gray-500">{error}</p>
-      </div>
-    );
-  }
+  const adminName =
+    typeof room.admin === "object"
+      ? room.admin?.name
+      : "Room Admin";
+
+  const adminEmail =
+    typeof room.admin === "object"
+      ? room.admin?.email
+      : "";
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
-      <ToastContainer />
-      <div className="max-w-6xl mx-auto">
-        {/* header */}
-        <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">{room.name}</h1>
-            <p className="text-gray-500">
-              {room.members.length + 1} members · रु {formatAmount(roomTotal)} total
-            </p>
-          </div>
+    <div className="min-h-screen bg-[#f5f7f3] text-gray-800">
+      {/* ================= HEADER ================= */}
 
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowAddExpense(true)}
-              className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-            >
-              <Plus size={16} /> Add Expense
-            </button>
-
-            {isAdmin && (
+      <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/90 backdrop-blur">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex min-h-[72px] items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3">
               <button
-                onClick={() => setShowAddMember(true)}
-                className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
+                onClick={() => navigate("/dashboard")}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:bg-gray-50"
               >
-                <UserPlus size={16} /> Member
+                <ArrowLeft size={20} />
               </button>
-            )}
+
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-bold text-gray-900 sm:text-xl">
+                  {room.name}
+                </h1>
+
+                <div className="flex items-center gap-1.5 text-xs text-gray-500 sm:text-sm">
+                  <ShieldCheck
+                    size={14}
+                    className="text-[#637b55]"
+                  />
+
+                  <span className="truncate">
+                    Admin: {adminName}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              {isAdmin && (
+                <button
+                  onClick={() => setShowMemberModal(true)}
+                  className="hidden items-center gap-2 rounded-xl bg-[#637b55] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#536947] sm:flex"
+                >
+                  <UserPlus size={18} />
+                  Add Member
+                </button>
+              )}
+
+              <button
+                onClick={() => setShowExpenseModal(true)}
+                className="flex items-center gap-2 rounded-xl bg-[#334e35] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#263c28]"
+              >
+                <Plus size={18} />
+
+                <span className="hidden sm:inline">
+                  Add Expense
+                </span>
+              </button>
+            </div>
           </div>
         </div>
+      </header>
 
-        {/* member list (admin only) */}
+      {/* ================= MAIN ================= */}
+
+      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
+        {/* MOBILE ADMIN BUTTON */}
+
         {isAdmin && (
-          <div className="bg-white rounded-xl shadow p-4 mb-6">
-            <h2 className="font-semibold mb-3">Members</h2>
-            <div className="space-y-2">
-              {room.members.map((m) => (
-                <div
-                  key={m.email}
-                  className="flex justify-between items-center text-sm border-b pb-2"
-                >
-                  <span>
-                    {m.email}{" "}
-                    <span
-                      className={`ml-2 text-xs px-2 py-0.5 rounded ${
-                        m.status === "joined"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-yellow-100 text-yellow-700"
-                      }`}
-                    >
-                      {m.status}
-                    </span>
-                  </span>
-                  <button
-                    onClick={() => removeMember(m.email)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-              {room.members.length === 0 && (
-                <p className="text-sm text-gray-400">No members yet.</p>
-              )}
-            </div>
-          </div>
+          <button
+            onClick={() => setShowMemberModal(true)}
+            className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[#637b55]/30 bg-white px-4 py-3 text-sm font-semibold text-[#536947] shadow-sm sm:hidden"
+          >
+            <UserPlus size={18} />
+            Add Member
+          </button>
         )}
 
+        {/* ================= STATS ================= */}
 
-        {summaries.length === 0 ? (
-          <div className="text-center py-10">
-            <Receipt className="mx-auto text-blue-500" />
-            <p>No expenses yet in this room.</p>
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {/* Total */}
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-gray-500">
+                  Total Expenses
+                </p>
+
+                <h2 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">
+                  Rs. {formatAmount(totalExpense)}
+                </h2>
+              </div>
+
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#edf3e9] text-[#637b55]">
+                <Wallet size={22} />
+              </div>
+            </div>
           </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 mb-6">
-              {summaries.map((user) => (
-                <div key={user.email} className="bg-white rounded-xl shadow p-4 min-w-0">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-11 h-11 shrink-0 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-700">
-                      {initials(user.name)}
-                    </div>
-                    <div className="min-w-0">
-                      <h2 className="font-semibold truncate">{user.name}</h2>
-                      <p className="text-sm text-gray-500 truncate">{user.email}</p>
-                    </div>
-                  </div>
 
-                  <div className="mt-4 flex justify-between gap-2">
-                    <div>
-                      <p className="text-xs text-gray-400">Entries</p>
-                      <h3 className="text-xl font-bold">{user.count}</h3>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-400">Total</p>
-                      <h3 className="text-lg font-bold text-blue-600">
-                        रु {formatAmount(user.total)}
-                      </h3>
-                    </div>
-                  </div>
+          {/* Count */}
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-gray-500">
+                  Transactions
+                </p>
+
+                <h2 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">
+                  {expenses.length}
+                </h2>
+              </div>
+
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <Receipt size={22} />
+              </div>
+            </div>
+          </div>
+
+          {/* Average */}
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-gray-500">
+                  Average Expense
+                </p>
+
+                <h2 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">
+                  Rs. {formatAmount(averageExpense)}
+                </h2>
+              </div>
+
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+                <Split size={22} />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ================= CONTENT ================= */}
+
+        <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+          {/* ================= EXPENSES ================= */}
+
+          <div className="min-w-0 rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <div className="border-b border-gray-100 p-4 sm:p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    Room Expenses
+                  </h2>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    Track all expenses shared in this room
+                  </p>
                 </div>
-              ))}
+
+                <div className="relative w-full sm:w-64">
+                  <Search
+                    size={17}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+
+                  <input
+                    type="text"
+                    placeholder="Search expenses..."
+                    value={search}
+                    onChange={(e) =>
+                      setSearch(e.target.value)
+                    }
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-[#637b55] focus:bg-white"
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* individual expenses - everyone can see all of them, but can
-                only edit/delete their own (admin can edit/delete any) */}
-            <div className="bg-white rounded-xl shadow p-4">
-              <h2 className="font-semibold mb-3 flex items-center gap-2">
-                <Receipt size={18} className="text-blue-600" /> All Expenses
-              </h2>
-              <div className="space-y-2">
-                {expenses.map((exp) => {
-                  const participants =
-                    exp.splitAmong && exp.splitAmong.length
-                      ? exp.splitAmong
-                      : allParticipantEmails;
-                  const perPerson = splitPreview(exp.amount, participants);
-                  const editable = canEditExpense(exp);
+            {/* DESKTOP TABLE */}
+
+            <div className="hidden overflow-x-auto md:block">
+              {expenseLoading ? (
+                <div className="flex min-h-[250px] items-center justify-center">
+                  <Loader2
+                    className="animate-spin text-[#637b55]"
+                    size={28}
+                  />
+                </div>
+              ) : filteredExpenses.length === 0 ? (
+                <EmptyExpenses
+                  onAdd={() => setShowExpenseModal(true)}
+                />
+              ) : (
+                <table className="w-full min-w-[700px]">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50/70 text-left text-xs uppercase tracking-wide text-gray-500">
+                      <th className="px-5 py-3 font-semibold">
+                        Expense
+                      </th>
+
+                      <th className="px-5 py-3 font-semibold">
+                        Category
+                      </th>
+
+                      <th className="px-5 py-3 font-semibold">
+                        Date
+                      </th>
+
+                      <th className="px-5 py-3 text-right font-semibold">
+                        Amount
+                      </th>
+
+                      {isAdmin && (
+                        <th className="px-5 py-3 text-right">
+                          Action
+                        </th>
+                      )}
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {filteredExpenses.map((item) => {
+                      const Icon = getCategoryIcon(
+                        item.category
+                      );
+
+                      return (
+                        <tr
+                          key={item._id}
+                          className="border-b border-gray-100 last:border-0 hover:bg-gray-50/60"
+                        >
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf3e9] text-[#637b55]">
+                                <Icon size={19} />
+                              </div>
+
+                              <div className="min-w-0">
+                                <p className="truncate font-semibold text-gray-900">
+                                  {item.title}
+                                </p>
+
+                                {item.createdBy?.name && (
+                                  <p className="mt-0.5 text-xs text-gray-500">
+                                    Added by{" "}
+                                    {item.createdBy.name}
+                                  </p>
+                                )}
+
+                                {item.split && (
+                                  <div className="mt-1 flex items-center gap-1 text-xs text-purple-600">
+                                    <Split size={12} />
+                                    Split expense
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+                              {item.category}
+                            </span>
+                          </td>
+
+                          <td className="px-5 py-4 text-sm text-gray-500">
+                            {formatDate(item.date)}
+                          </td>
+
+                          <td className="px-5 py-4 text-right font-bold text-gray-900">
+                            Rs. {formatAmount(item.amount)}
+                          </td>
+
+                          {isAdmin && (
+                            <td className="px-5 py-4 text-right">
+                              <button
+                                onClick={() =>
+                                  handleDeleteExpense(
+                                    item._id
+                                  )
+                                }
+                                className="rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                              >
+                                <Trash2 size={17} />
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* MOBILE EXPENSE CARDS */}
+
+            <div className="space-y-3 p-4 md:hidden">
+              {expenseLoading ? (
+                <div className="flex min-h-[250px] items-center justify-center">
+                  <Loader2
+                    className="animate-spin text-[#637b55]"
+                    size={28}
+                  />
+                </div>
+              ) : filteredExpenses.length === 0 ? (
+                <EmptyExpenses
+                  onAdd={() => setShowExpenseModal(true)}
+                />
+              ) : (
+                filteredExpenses.map((item) => {
+                  const Icon = getCategoryIcon(
+                    item.category
+                  );
 
                   return (
                     <div
-                      key={exp._id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3 text-sm"
+                      key={item._id}
+                      className="rounded-xl border border-gray-100 bg-gray-50/50 p-4"
                     >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium">{exp.title}</span>
-                          {exp.category && (
-                            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
-                              {exp.category}
-                            </span>
-                          )}
-                          {exp.user?.email === currentUserEmail && (
-                            <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded">
-                              You
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf3e9] text-[#637b55]">
+                            <Icon size={18} />
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-gray-900">
+                              {item.title}
+                            </p>
+
+                            <p className="text-xs text-gray-500">
+                              {formatDate(item.date)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {isAdmin && (
+                          <button
+                            onClick={() =>
+                              handleDeleteExpense(
+                                item._id
+                              )
+                            }
+                            className="shrink-0 rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-500"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-600">
+                            {item.category}
+                          </span>
+
+                          {item.split && (
+                            <span className="flex items-center gap-1 rounded-full bg-purple-50 px-2.5 py-1 text-xs font-medium text-purple-600">
+                              <Split size={12} />
+                              Split
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          Added by {exp.user?.name || "Unknown"}
-                          {exp.date ? ` · ${exp.date.slice(0, 10)}` : ""}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
-                          <Users size={12} /> Split {participants.length} ways ·
-                          रु {formatAmount(perPerson)} each
-                        </p>
-                      </div>
 
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="font-bold text-blue-600">
-                          रु {formatAmount(exp.amount)}
-                        </span>
-                        {editable && (
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => openEditExpense(exp)}
-                              className="text-gray-500 hover:text-blue-600"
-                              title="Edit"
-                            >
-                              <Pencil size={16} />
-                            </button>
-                            <button
-                              onClick={() => deleteExpense(exp)}
-                              className="text-gray-500 hover:text-red-600"
-                              title="Delete"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        )}
+                        <p className="font-bold text-gray-900">
+                          Rs. {formatAmount(item.amount)}
+                        </p>
                       </div>
                     </div>
                   );
-                })}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* add expense modal */}
-      {showAddExpense && (
-        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-xl p-5 sm:p-6 w-full max-w-sm relative">
-            <button
-              onClick={() => setShowAddExpense(false)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
-            >
-              <X size={20} />
-            </button>
-
-            <h2 className="text-xl font-bold mb-4">Add Expense</h2>
-
-            <input
-              className="border w-full p-2 mb-3 rounded"
-              placeholder="Title"
-              value={newExpense.title}
-              onChange={(e) => setNewExpense({ ...newExpense, title: e.target.value })}
-            />
-            <input
-              type="number"
-              className="border w-full p-2 mb-3 rounded"
-              placeholder="Amount"
-              value={newExpense.amount}
-              onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
-            />
-            <input
-              className="border w-full p-2 mb-3 rounded"
-              placeholder="Category"
-              value={newExpense.category}
-              onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
-            />
-            <input
-              type="date"
-              className="border w-full p-2 mb-3 rounded"
-              value={newExpense.date}
-              onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
-            />
-
-            {allParticipantEmails.length > 0 && (
-              <p className="text-xs text-gray-500 mb-4 flex items-center gap-1">
-                <Users size={12} /> Split equally among {allParticipantEmails.length}{" "}
-                member{allParticipantEmails.length === 1 ? "" : "s"}
-                {newExpense.amount
-                  ? ` · रु ${formatAmount(
-                      splitPreview(newExpense.amount, allParticipantEmails)
-                    )} each`
-                  : ""}
-              </p>
-            )}
-
-            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
-              <button
-                onClick={() => setShowAddExpense(false)}
-                className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={createExpense}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded"
-              >
-                Add
-              </button>
+                })
+              )}
             </div>
           </div>
-        </div>
-      )}
 
-      {/* edit expense modal - owner or admin */}
-      {editingExpense && (
-        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-xl p-5 sm:p-6 w-full max-w-sm relative">
-            <button
-              onClick={() => setEditingExpense(null)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
-            >
-              <X size={20} />
-            </button>
+          {/* ================= MEMBERS ================= */}
 
-            <h2 className="text-xl font-bold mb-4">Edit Expense</h2>
+          <aside className="h-fit rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 p-5">
+              <div>
+                <h2 className="font-bold text-gray-900">
+                  Members
+                </h2>
 
-            <input
-              className="border w-full p-2 mb-3 rounded"
-              placeholder="Title"
-              value={editForm.title}
-              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-            />
-            <input
-              type="number"
-              className="border w-full p-2 mb-3 rounded"
-              placeholder="Amount"
-              value={editForm.amount}
-              onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
-            />
-            <input
-              className="border w-full p-2 mb-3 rounded"
-              placeholder="Category"
-              value={editForm.category}
-              onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-            />
-            <input
-              type="date"
-              className="border w-full p-2 mb-3 rounded"
-              value={editForm.date}
-              onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
-            />
-
-            {isAdmin ? (
-              <div className="mb-4">
-                <p className="text-xs font-medium text-gray-600 mb-2">
-                  Split among
+                <p className="mt-1 text-xs text-gray-500">
+                  {members.length + 1} people
                 </p>
-                <div className="space-y-1 max-h-32 overflow-y-auto border rounded p-2">
-                  {allParticipantEmails.map((email) => (
-                    <label key={email} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={editForm.splitAmong.includes(email)}
-                        onChange={() => toggleEditSplitMember(email)}
-                      />
-                      {email}
-                    </label>
-                  ))}
+              </div>
+
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#edf3e9] text-[#637b55]">
+                <Users size={19} />
+              </div>
+            </div>
+
+            <div className="max-h-[430px] space-y-2 overflow-y-auto p-4">
+              {/* ADMIN */}
+
+              <div className="flex items-center gap-3 rounded-xl bg-[#f5f8f3] p-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#637b55] text-sm font-bold text-white">
+                  {getInitials(adminName)}
                 </div>
-                {editForm.amount && editForm.splitAmong.length > 0 && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    रु {formatAmount(splitPreview(editForm.amount, editForm.splitAmong))}{" "}
-                    each across {editForm.splitAmong.length} member
-                    {editForm.splitAmong.length === 1 ? "" : "s"}
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-gray-900">
+                    {adminName}
                   </p>
+
+                  <p className="truncate text-xs text-gray-500">
+                    {adminEmail}
+                  </p>
+                </div>
+
+                <span className="shrink-0 rounded-full bg-[#637b55]/10 px-2 py-1 text-[10px] font-bold uppercase text-[#637b55]">
+                  Admin
+                </span>
+              </div>
+
+              {/* MEMBERS */}
+
+              {members.map((member, index) => {
+                const memberName =
+                  member.user?.name ||
+                  member.email?.split("@")[0] ||
+                  "Member";
+
+                return (
+                  <div
+                    key={
+                      member.user?._id ||
+                      member.email ||
+                      index
+                    }
+                    className="group flex items-center gap-3 rounded-xl p-3 transition hover:bg-gray-50"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm font-semibold text-gray-600">
+                      {getInitials(memberName)}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-gray-800">
+                        {memberName}
+                      </p>
+
+                      <p className="truncate text-xs text-gray-500">
+                        {member.email}
+                      </p>
+                    </div>
+
+                    {isAdmin && (
+                      <button
+                        onClick={() =>
+                          handleRemoveMember(
+                            member.email
+                          )
+                        }
+                        className="rounded-lg p-2 text-gray-300 opacity-100 transition hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {members.length === 0 && (
+                <div className="py-8 text-center">
+                  <Users
+                    size={28}
+                    className="mx-auto text-gray-300"
+                  />
+
+                  <p className="mt-2 text-sm text-gray-500">
+                    No members added yet
+                  </p>
+                </div>
+              )}
+            </div>
+          </aside>
+        </section>
+      </main>
+
+      {/* ======================================================
+          ADD EXPENSE MODAL
+      ====================================================== */}
+
+      {showExpenseModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="max-h-[95vh] w-full overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:max-w-lg sm:rounded-2xl">
+            {/* Modal header */}
+
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white px-5 py-4 sm:px-6">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Add Expense
+                </h2>
+
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Add an expense to {room.name}
+                </p>
+              </div>
+
+              <button
+                onClick={() =>
+                  setShowExpenseModal(false)
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200"
+              >
+                <X size={19} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleSubmitExpense}
+              className="space-y-5 p-5 sm:p-6"
+            >
+              {/* Title */}
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                  Expense Title
+                </label>
+
+                <input
+                  type="text"
+                  name="title"
+                  placeholder="e.g. Monthly groceries"
+                  value={expense.title}
+                  onChange={handleExpenseChange}
+                  minLength={2}
+                  maxLength={50}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-[#637b55] focus:bg-white"
+                />
+              </div>
+
+              {/* Amount */}
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                  Amount
+                </label>
+
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-400">
+                    Rs.
+                  </span>
+
+                  <input
+                    type="number"
+                    name="amount"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    value={expense.amount}
+                    onChange={handleExpenseChange}
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-12 pr-4 text-sm outline-none transition focus:border-[#637b55] focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Category */}
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                  Category
+                </label>
+
+                <div className="relative">
+                  <select
+                    name="category"
+                    value={expense.category}
+                    onChange={handleExpenseChange}
+                    className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-sm outline-none transition focus:border-[#637b55] focus:bg-white"
+                  >
+                    <option value="">
+                      Select category
+                    </option>
+
+                    {categories.map((category) => (
+                      <option
+                        key={category.name}
+                        value={category.name}
+                      >
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <ChevronDown
+                    size={17}
+                    className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                </div>
+              </div>
+
+              {/* Date */}
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                  Date
+                </label>
+
+                <div
+                  className="relative cursor-pointer"
+                  onClick={openDatePicker}
+                >
+                  <input
+                    ref={dateRef}
+                    type="date"
+                    name="date"
+                    value={expense.date}
+                    onChange={handleExpenseChange}
+                    max={
+                      new Date(
+                        Date.now() -
+                          new Date().getTimezoneOffset() *
+                            60000
+                      )
+                        .toISOString()
+                        .split("T")[0]
+                    }
+                    className="w-full cursor-pointer rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-[#637b55] focus:bg-white"
+                    style={{
+                      colorScheme: "light",
+                    }}
+                  />
+
+                  <Calendar
+                    size={18}
+                    className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                </div>
+              </div>
+
+              {/* SPLIT */}
+
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
+                      <Split size={19} />
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">
+                        Split this expense
+                      </p>
+
+                      <p className="text-xs text-gray-500">
+                        Share this expense with members
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSplitToggle}
+                    className={`relative h-6 w-11 rounded-full transition ${
+                      expense.split
+                        ? "bg-[#637b55]"
+                        : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${
+                        expense.split
+                          ? "left-6"
+                          : "left-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* MEMBER SELECTION */}
+
+                {expense.split && (
+                  <div className="mt-4 border-t border-gray-200 pt-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Split with
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpense((prev) => ({
+                            ...prev,
+                            splitMembers:
+                              members.map(
+                                (member) =>
+                                  member.email
+                              ),
+                          }))
+                        }
+                        className="text-xs font-semibold text-[#637b55]"
+                      >
+                        Select all
+                      </button>
+                    </div>
+
+                    <div className="max-h-40 space-y-2 overflow-y-auto">
+                      {/* Current user */}
+
+                      <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-white p-3">
+                        <input
+                          type="checkbox"
+                          checked={expense.splitMembers.includes(
+                            currentUser.email
+                          )}
+                          onChange={() =>
+                            toggleSplitMember(
+                              currentUser.email
+                            )
+                          }
+                          className="h-4 w-4 accent-[#637b55]"
+                        />
+
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#637b55] text-xs font-bold text-white">
+                          {getInitials(
+                            currentUser.name ||
+                              currentUser.email
+                          )}
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">
+                            {currentUser.name ||
+                              "You"}
+                          </p>
+
+                          <p className="truncate text-xs text-gray-400">
+                            {currentUser.email}
+                          </p>
+                        </div>
+
+                        <span className="ml-auto text-xs text-gray-400">
+                          You
+                        </span>
+                      </label>
+
+                      {members.map((member) => (
+                        <label
+                          key={member.email}
+                          className="flex cursor-pointer items-center gap-3 rounded-xl bg-white p-3"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={expense.splitMembers.includes(
+                              member.email
+                            )}
+                            onChange={() =>
+                              toggleSplitMember(
+                                member.email
+                              )
+                            }
+                            className="h-4 w-4 accent-[#637b55]"
+                          />
+
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">
+                            {getInitials(
+                              member.user?.name ||
+                                member.email
+                            )}
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">
+                              {member.user?.name ||
+                                member.email.split(
+                                  "@"
+                                )[0]}
+                            </p>
+
+                            <p className="truncate text-xs text-gray-400">
+                              {member.email}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+
+                    {expense.amount &&
+                      expense.splitMembers.length >
+                        0 && (
+                        <div className="mt-3 rounded-xl bg-purple-50 p-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-purple-600">
+                              Each person pays
+                            </span>
+
+                            <span className="font-bold text-purple-700">
+                              Rs.{" "}
+                              {formatAmount(
+                                Number(
+                                  expense.amount
+                                ) /
+                                  expense
+                                    .splitMembers
+                                    .length
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                  </div>
                 )}
               </div>
-            ) : (
-              <p className="text-xs text-gray-500 mb-4 flex items-center gap-1">
-                <Users size={12} /> Split equally among {editForm.splitAmong.length}{" "}
-                member{editForm.splitAmong.length === 1 ? "" : "s"}
-                {editForm.amount
-                  ? ` · रु ${formatAmount(
-                      splitPreview(editForm.amount, editForm.splitAmong)
-                    )} each`
-                  : ""}
-              </p>
-            )}
 
-            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
-              <button
-                onClick={() => setEditingExpense(null)}
-                className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={updateExpense}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded"
-              >
-                Save
-              </button>
-            </div>
+              {/* BUTTONS */}
+
+              <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowExpenseModal(false)
+                  }
+                  className="w-full rounded-xl bg-gray-100 px-5 py-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-200 sm:w-auto"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={expenseLoading}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#334e35] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#263c28] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                >
+                  {expenseLoading && (
+                    <Loader2
+                      size={17}
+                      className="animate-spin"
+                    />
+                  )}
+
+                  Save Expense
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* add member modal */}
-      {showAddMember && (
-        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-xl p-5 sm:p-6 w-full max-w-sm relative">
-            <button
-              onClick={() => setShowAddMember(false)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
+      {/* ======================================================
+          ADD MEMBER MODAL
+      ====================================================== */}
+
+      {showMemberModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="w-full rounded-t-3xl bg-white shadow-2xl sm:max-w-md sm:rounded-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Add Member
+                </h2>
+
+                <p className="mt-1 text-xs text-gray-500">
+                  Add a registered user to this room
+                </p>
+              </div>
+
+              <button
+                onClick={() =>
+                  setShowMemberModal(false)
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200"
+              >
+                <X size={19} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleAddMember}
+              className="space-y-5 p-5 sm:p-6"
             >
-              <X size={20} />
-            </button>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                  Member Email
+                </label>
 
-            <h2 className="text-xl font-bold mb-4">Add Member</h2>
+                <input
+                  type="email"
+                  value={memberEmail}
+                  onChange={(e) =>
+                    setMemberEmail(e.target.value)
+                  }
+                  placeholder="member@example.com"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-[#637b55] focus:bg-white"
+                  autoFocus
+                />
 
-            <input
-              type="email"
-              className="border w-full p-2 mb-4 rounded"
-              placeholder="member@email.com"
-              value={newMemberEmail}
-              onChange={(e) => setNewMemberEmail(e.target.value)}
-            />
+                <p className="mt-2 text-xs text-gray-400">
+                  The user must already have an account.
+                </p>
+              </div>
 
-            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
-              <button
-                onClick={() => setShowAddMember(false)}
-                className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={addMember}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded"
-              >
-                Add
-              </button>
-            </div>
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowMemberModal(false)
+                  }
+                  className="w-full rounded-xl bg-gray-100 px-5 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-200 sm:w-auto"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={memberLoading}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#637b55] px-6 py-3 text-sm font-semibold text-white hover:bg-[#536947] disabled:opacity-60 sm:w-auto"
+                >
+                  {memberLoading && (
+                    <Loader2
+                      size={17}
+                      className="animate-spin"
+                    />
+                  )}
+
+                  <UserPlus size={17} />
+
+                  Add Member
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ============================================================
+   EMPTY EXPENSES
+============================================================ */
+
+function EmptyExpenses({ onAdd }) {
+  return (
+    <div className="flex min-h-[300px] flex-col items-center justify-center px-5 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#edf3e9] text-[#637b55]">
+        <Receipt size={26} />
+      </div>
+
+      <h3 className="mt-4 font-bold text-gray-900">
+        No expenses yet
+      </h3>
+
+      <p className="mt-1 max-w-xs text-sm text-gray-500">
+        Add your first room expense to start tracking
+        shared spending.
+      </p>
+
+      <button
+        onClick={onAdd}
+        className="mt-5 flex items-center gap-2 rounded-xl bg-[#334e35] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#263c28]"
+      >
+        <Plus size={17} />
+        Add Expense
+      </button>
     </div>
   );
 }
