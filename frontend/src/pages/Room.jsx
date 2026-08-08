@@ -1,1550 +1,628 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import api from "../api";
-import { toast } from "react-toastify";
+import React, { useMemo, useState } from "react";
 import {
-  ArrowLeft,
   Plus,
-  Users,
-  Receipt,
-  Wallet,
-  UserPlus,
   X,
-  Calendar,
+  Users,
+  Mail,
   ChevronDown,
-  Split,
+  UserPlus,
   Trash2,
-  Loader2,
-  Search,
-  Utensils,
-  Car,
-  ShoppingBag,
-  FileText,
-  Gamepad2,
-  MoreHorizontal,
-  ShieldCheck,
+  Receipt,
 } from "lucide-react";
 
-const API = "https://daybook-j903.onrender.com/api";
-
-const categories = [
-  {
-    name: "Food",
-    icon: Utensils,
-  },
-  {
-    name: "Travel",
-    icon: Car,
-  },
-  {
-    name: "Shopping",
-    icon: ShoppingBag,
-  },
-  {
-    name: "Bills",
-    icon: FileText,
-  },
-  {
-    name: "Entertainment",
-    icon: Gamepad2,
-  },
-  {
-    name: "Others",
-    icon: MoreHorizontal,
-  },
+const initialMembers = [
+  { id: 1, name: "Aayush", email: "aayush@example.com", isAdmin: true },
+  { id: 2, name: "Ram", email: "ram@example.com", isAdmin: false },
+  { id: 3, name: "Sita", email: "sita@example.com", isAdmin: false },
 ];
 
-function formatAmount(amount) {
-  return Number(amount || 0).toLocaleString("en-NP", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
+const categories = [
+  "Food",
+  "Transport",
+  "Shopping",
+  "Entertainment",
+  "Bills",
+  "Travel",
+  "Health",
+  "Education",
+  "Other",
+];
 
-function formatDate(date) {
-  if (!date) return "-";
+const tokens = {
+  bg: "#F5F7F1",
+  ink: "#1B2620",
+  surface: "#FFFFFF",
+  border: "#E2E6DC",
+  teal: "#2F6F5E",
+  tealDark: "#24594B",
+  tealSoft: "#E7EFEA",
+  gold: "#C98A2B",
+  brick: "#BE4B3C",
+  brickSoft: "#FBEAE7",
+  muted: "#6B7568",
+};
 
-  return new Date(date).toLocaleDateString("en-NP", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function getInitials(name = "") {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join("")
-    .toUpperCase();
-}
-
-function getCategoryIcon(category) {
-  const found = categories.find((item) => item.name === category);
-
-  if (!found) return MoreHorizontal;
-
-  return found.icon;
-}
+const avatarPalette = ["#2F6F5E", "#C98A2B", "#5B6EA6", "#BE4B3C", "#4E8B7A"];
 
 export default function Room() {
-  const { id, roomId } = useParams();
-  const currentRoomId = roomId || id;
-
-  const navigate = useNavigate();
-  const dateRef = useRef(null);
-
-  const [room, setRoom] = useState(null);
-  const [members, setMembers] = useState([]);
-  const [expenses, setExpenses] = useState([]);
-
-  const [loading, setLoading] = useState(true);
-  const [expenseLoading, setExpenseLoading] = useState(false);
-  const [memberLoading, setMemberLoading] = useState(false);
-
-  const [showExpenseModal, setShowExpenseModal] = useState(false);
-  const [showMemberModal, setShowMemberModal] = useState(false);
-
-  const [search, setSearch] = useState("");
-
+  const [members, setMembers] = useState(initialMembers);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(true);
+  const [splitOpen, setSplitOpen] = useState(false);
   const [memberEmail, setMemberEmail] = useState("");
 
   const [expense, setExpense] = useState({
     title: "",
     amount: "",
-    category: "",
-    date: "",
-    split: false,
-    splitMembers: [],
+    category: "Food",
+    date: new Date().toISOString().split("T")[0],
+    paidBy: initialMembers[0]?.id ?? "",
   });
 
-  const token = localStorage.getItem("token");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [lastExpense, setLastExpense] = useState(null);
 
-  const authConfig = {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-
-  // -----------------------------------------
-  // BODY SCROLL LOCK
-  // -----------------------------------------
-
-  useEffect(() => {
-    const modalOpen = showExpenseModal || showMemberModal;
-
-    document.body.style.overflow = modalOpen ? "hidden" : "auto";
-
-    return () => {
-      document.body.style.overflow = "auto";
-    };
-  }, [showExpenseModal, showMemberModal]);
-
-  // -----------------------------------------
-  // LOAD ROOM
-  // -----------------------------------------
-
-  const loadRoom = async () => {
-    try {
-      setLoading(true);
-
-      const response = await api.get(
-        `${API}/rooms/${currentRoomId}`,
-        authConfig
-      );
-
-      setRoom(response.data.room);
-    } catch (error) {
-      console.error(error.response?.data || error.message);
-
-      toast.error(
-        error.response?.data?.message || "Failed to load room"
-      );
-
-      navigate("/dashboard");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // -----------------------------------------
-  // LOAD MEMBERS
-  // -----------------------------------------
-
-  const loadMembers = async () => {
-    try {
-      const response = await api.get(
-        `${API}/rooms/${currentRoomId}/members`,
-        authConfig
-      );
-
-      setMembers(response.data.members || []);
-    } catch (error) {
-      console.error(error.response?.data || error.message);
-    }
-  };
-
-  // -----------------------------------------
-  // LOAD EXPENSES
-  // -----------------------------------------
-
-  const loadExpenses = async () => {
-    try {
-      setExpenseLoading(true);
-
-      const response = await api.get(
-        `${API}/rooms/${currentRoomId}/expenses`,
-        authConfig
-      );
-
-      setExpenses(response.data.expenses || []);
-    } catch (error) {
-      console.error(error.response?.data || error.message);
-
-      // If your backend currently uses /api/expenses
-      // you can change the endpoint here.
-      setExpenses([]);
-    } finally {
-      setExpenseLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!currentRoomId) {
-      navigate("/dashboard");
-      return;
-    }
-
-    loadRoom();
-    loadMembers();
-    loadExpenses();
-  }, [currentRoomId]);
-
-  // -----------------------------------------
-  // ADMIN CHECK
-  // -----------------------------------------
-
-  const currentUser = JSON.parse(
-    localStorage.getItem("user") || "{}"
-  );
-
-  const isAdmin = useMemo(() => {
-    if (!room || !currentUser?._id) return false;
-
-    const adminId =
-      typeof room.admin === "object"
-        ? room.admin?._id
-        : room.admin;
-
-    return adminId === currentUser._id;
-  }, [room, currentUser?._id]);
-
-  // -----------------------------------------
-  // EXPENSE CHANGE
-  // -----------------------------------------
+  const splitAmount = useMemo(() => {
+    const amount = Number(expense.amount);
+    if (!amount || members.length === 0) return 0;
+    return amount / members.length;
+  }, [expense.amount, members.length]);
 
   const handleExpenseChange = (e) => {
     const { name, value } = e.target;
-
-    setExpense((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setExpense((prev) => ({ ...prev, [name]: value }));
   };
 
-  // -----------------------------------------
-  // DATE PICKER
-  // -----------------------------------------
+  const handleAddMember = (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
 
-  const openDatePicker = () => {
-    if (dateRef.current?.showPicker) {
-      dateRef.current.showPicker();
-    } else {
-      dateRef.current?.focus();
-    }
+    const email = memberEmail.trim().toLowerCase();
+    if (!email) return setError("Please enter an email address.");
+    if (!email.includes("@")) return setError("Please enter a valid email address.");
+
+    const alreadyExists = members.some((m) => m.email.toLowerCase() === email);
+    if (alreadyExists) return setError("This user is already a room member.");
+
+    const newMember = {
+      id: Date.now(),
+      name: email.split("@")[0],
+      email,
+      isAdmin: false,
+    };
+
+    setMembers((prev) => [...prev, newMember]);
+    setMemberEmail("");
+    setShowAddMember(false);
+    setLastExpense(null);
+    setSuccess("Member added successfully.");
   };
 
-  // -----------------------------------------
-  // SPLIT TOGGLE
-  // -----------------------------------------
-
-  const handleSplitToggle = () => {
-    setExpense((prev) => ({
-      ...prev,
-      split: !prev.split,
-      splitMembers: !prev.split
-        ? members.map((member) => member.email)
-        : [],
-    }));
+  const handleRemoveMember = (id) => {
+    const member = members.find((m) => m.id === id);
+    if (member?.isAdmin) return setError("The room admin cannot be removed.");
+    setLastExpense(null);
+    setSuccess("");
+    setMembers((prev) => prev.filter((m) => m.id !== id));
   };
 
-  // -----------------------------------------
-  // SELECT SPLIT MEMBER
-  // -----------------------------------------
+  const handleAddExpense = (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
 
-  const toggleSplitMember = (email) => {
-    setExpense((prev) => {
-      const exists = prev.splitMembers.includes(email);
+    if (!expense.title.trim()) return setError("Please enter an expense title.");
+    if (!expense.amount || Number(expense.amount) <= 0)
+      return setError("Please enter a valid amount.");
+    if (!expense.date) return setError("Please select a date.");
+    if (members.length === 0) return setError("There are no members in this room.");
+    if (!expense.paidBy) return setError("Please select who paid.");
 
-      return {
-        ...prev,
-        splitMembers: exists
-          ? prev.splitMembers.filter((item) => item !== email)
-          : [...prev.splitMembers, email],
-      };
+    const payer = members.find((m) => m.id === Number(expense.paidBy));
+
+    const expenseData = {
+      ...expense,
+      amount: Number(expense.amount),
+      splitType: "equal",
+      members: members.map((m) => ({
+        user: m.id,
+        amount: Number(splitAmount.toFixed(2)),
+      })),
+    };
+
+    console.log("Expense:", expenseData);
+    setSuccess("Expense added successfully.");
+    setLastExpense({
+      title: expense.title,
+      amount: Number(expense.amount),
+      category: expense.category,
+      date: expense.date,
+      payer,
+    });
+    setExpense({
+      title: "",
+      amount: "",
+      category: "Food",
+      date: new Date().toISOString().split("T")[0],
+      paidBy: members[0]?.id ?? "",
     });
   };
-
-  // -----------------------------------------
-  // ADD EXPENSE
-  // -----------------------------------------
-
-  const handleSubmitExpense = async (e) => {
-    e.preventDefault();
-
-    if (!expense.title.trim()) {
-      toast.error("Please enter expense title");
-      return;
-    }
-
-    if (!expense.amount || Number(expense.amount) <= 0) {
-      toast.error("Please enter a valid amount");
-      return;
-    }
-
-    if (!expense.category) {
-      toast.error("Please select a category");
-      return;
-    }
-
-    if (!expense.date) {
-      toast.error("Please select a date");
-      return;
-    }
-
-    if (
-      expense.split &&
-      expense.splitMembers.length === 0
-    ) {
-      toast.error("Select at least one member for split");
-      return;
-    }
-
-    try {
-      setExpenseLoading(true);
-
-      const payload = {
-        title: expense.title.trim(),
-        amount: Number(expense.amount),
-        category: expense.category,
-        date: expense.date,
-
-        roomId: currentRoomId,
-
-        split: expense.split,
-
-        splitMembers: expense.split
-          ? expense.splitMembers
-          : [],
-      };
-
-      const response = await api.post(
-        `${API}/rooms/${currentRoomId}/expenses`,
-        payload,
-        authConfig
-      );
-
-      const createdExpense =
-        response.data.expense || response.data;
-
-      setExpenses((prev) => [
-        createdExpense,
-        ...prev,
-      ]);
-
-      setExpense({
-        title: "",
-        amount: "",
-        category: "",
-        date: "",
-        split: false,
-        splitMembers: [],
-      });
-
-      setShowExpenseModal(false);
-
-      toast.success("Expense added successfully");
-    } catch (error) {
-      console.error(
-        error.response?.data || error.message
-      );
-
-      toast.error(
-        error.response?.data?.message ||
-          "Failed to add expense"
-      );
-    } finally {
-      setExpenseLoading(false);
-    }
-  };
-
-  // -----------------------------------------
-  // ADD MEMBER
-  // -----------------------------------------
-
-  const handleAddMember = async (e) => {
-    e.preventDefault();
-
-    if (!memberEmail.trim()) {
-      toast.error("Enter member email");
-      return;
-    }
-
-    if (!memberEmail.includes("@")) {
-      toast.error("Enter a valid email");
-      return;
-    }
-
-    try {
-      setMemberLoading(true);
-
-      const response = await api.post(
-        `${API}/rooms/${currentRoomId}/members`,
-        {
-          email: memberEmail.trim().toLowerCase(),
-        },
-        authConfig
-      );
-
-      if (response.data.room) {
-        setRoom(response.data.room);
-      }
-
-      await loadMembers();
-
-      setMemberEmail("");
-      setShowMemberModal(false);
-
-      toast.success("Member added successfully");
-    } catch (error) {
-      console.error(
-        error.response?.data || error.message
-      );
-
-      toast.error(
-        error.response?.data?.message ||
-          "Failed to add member"
-      );
-    } finally {
-      setMemberLoading(false);
-    }
-  };
-
-  // -----------------------------------------
-  // REMOVE MEMBER
-  // -----------------------------------------
-
-  const handleRemoveMember = async (email) => {
-    if (!isAdmin) {
-      toast.error("Only admin can remove members");
-      return;
-    }
-
-    const confirmRemove = window.confirm(
-      `Remove ${email} from this room?`
-    );
-
-    if (!confirmRemove) return;
-
-    try {
-      await api.delete(
-        `${API}/rooms/${currentRoomId}/members`,
-        {
-          ...authConfig,
-          data: {
-            email,
-          },
-        }
-      );
-
-      await loadMembers();
-
-      toast.success("Member removed successfully");
-    } catch (error) {
-      console.error(
-        error.response?.data || error.message
-      );
-
-      toast.error(
-        error.response?.data?.message ||
-          "Failed to remove member"
-      );
-    }
-  };
-
-  // -----------------------------------------
-  // DELETE EXPENSE
-  // -----------------------------------------
-
-  const handleDeleteExpense = async (expenseId) => {
-    if (!isAdmin) {
-      toast.error("Only admin can delete expenses");
-      return;
-    }
-
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this expense?"
-    );
-
-    if (!confirmed) return;
-
-    try {
-      await api.delete(
-        `${API}/rooms/${currentRoomId}/expenses/${expenseId}`,
-        authConfig
-      );
-
-      setExpenses((prev) =>
-        prev.filter((item) => item._id !== expenseId)
-      );
-
-      toast.success("Expense deleted");
-    } catch (error) {
-      console.error(
-        error.response?.data || error.message
-      );
-
-      toast.error(
-        error.response?.data?.message ||
-          "Failed to delete expense"
-      );
-    }
-  };
-
-  // -----------------------------------------
-  // FILTER EXPENSES
-  // -----------------------------------------
-
-  const filteredExpenses = useMemo(() => {
-    const value = search.toLowerCase().trim();
-
-    if (!value) return expenses;
-
-    return expenses.filter((item) => {
-      return (
-        item.title?.toLowerCase().includes(value) ||
-        item.category?.toLowerCase().includes(value) ||
-        item.createdBy?.name
-          ?.toLowerCase()
-          .includes(value)
-      );
-    });
-  }, [expenses, search]);
-
-  // -----------------------------------------
-  // TOTAL
-  // -----------------------------------------
-
-  const totalExpense = useMemo(() => {
-    return expenses.reduce(
-      (total, item) => total + Number(item.amount || 0),
-      0
-    );
-  }, [expenses]);
-
-  const averageExpense = useMemo(() => {
-    if (!expenses.length) return 0;
-
-    return totalExpense / expenses.length;
-  }, [totalExpense, expenses.length]);
-
-  // -----------------------------------------
-  // LOADING
-  // -----------------------------------------
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#f5f7f3] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-[#637b55]" />
-          <p className="text-gray-500">
-            Loading room...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!room) {
-    return null;
-  }
-
-  const adminName =
-    typeof room.admin === "object"
-      ? room.admin?.name
-      : "Room Admin";
-
-  const adminEmail =
-    typeof room.admin === "object"
-      ? room.admin?.email
-      : "";
 
   return (
-    <div className="min-h-screen bg-[#f5f7f3] text-gray-800">
-      {/* ================= HEADER ================= */}
+    <div className="min-h-screen font-body" style={{ background: tokens.bg }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+        .font-display { font-family: 'Fraunces', Georgia, serif; }
+        .font-body { font-family: 'Inter', system-ui, sans-serif; }
+        .num { font-variant-numeric: tabular-nums; }
+        .field:focus { outline: none; border-color: ${tokens.teal} !important; box-shadow: 0 0 0 3px ${tokens.tealSoft}; }
+        .tear {
+          height: 10px;
+          background-image:
+            linear-gradient(135deg, ${tokens.surface} 25%, transparent 25%),
+            linear-gradient(225deg, ${tokens.surface} 25%, transparent 25%);
+          background-size: 14px 14px;
+          background-position: 0 0;
+        }
+      `}</style>
 
-      <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex min-h-[72px] items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:bg-gray-50"
-              >
-                <ArrowLeft size={20} />
-              </button>
-
-              <div className="min-w-0">
-                <h1 className="truncate text-lg font-bold text-gray-900 sm:text-xl">
-                  {room.name}
-                </h1>
-
-                <div className="flex items-center gap-1.5 text-xs text-gray-500 sm:text-sm">
-                  <ShieldCheck
-                    size={14}
-                    className="text-[#637b55]"
-                  />
-
-                  <span className="truncate">
-                    Admin: {adminName}
-                  </span>
-                </div>
-              </div>
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+              style={{ background: tokens.teal, color: "#fff" }}
+            >
+              <Receipt size={19} />
             </div>
-
-            <div className="flex shrink-0 items-center gap-2">
-              {isAdmin && (
-                <button
-                  onClick={() => setShowMemberModal(true)}
-                  className="hidden items-center gap-2 rounded-xl bg-[#637b55] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#536947] sm:flex"
-                >
-                  <UserPlus size={18} />
-                  Add Member
-                </button>
-              )}
-
-              <button
-                onClick={() => setShowExpenseModal(true)}
-                className="flex items-center gap-2 rounded-xl bg-[#334e35] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#263c28]"
-              >
-                <Plus size={18} />
-
-                <span className="hidden sm:inline">
-                  Add Expense
-                </span>
-              </button>
+            <div>
+              <h1 className="font-display text-2xl font-semibold" style={{ color: tokens.ink }}>
+                Room Ledger
+              </h1>
+              <p className="text-sm" style={{ color: tokens.muted }}>
+                Track shared spending, split evenly, settle up
+              </p>
             </div>
           </div>
-        </div>
-      </header>
 
-      {/* ================= MAIN ================= */}
-
-      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
-        {/* MOBILE ADMIN BUTTON */}
-
-        {isAdmin && (
           <button
-            onClick={() => setShowMemberModal(true)}
-            className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[#637b55]/30 bg-white px-4 py-3 text-sm font-semibold text-[#536947] shadow-sm sm:hidden"
+            type="button"
+            onClick={() => {
+              setError("");
+              setShowAddMember(true);
+            }}
+            className="inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition active:scale-[0.97]"
+            style={{ background: tokens.ink, color: "#fff" }}
           >
-            <UserPlus size={18} />
-            Add Member
+            <UserPlus size={16} />
+            Add member
           </button>
+        </div>
+
+        {/* Alerts */}
+        {error && (
+          <div
+            className="mb-5 rounded-xl px-4 py-3 text-sm"
+            style={{ background: tokens.brickSoft, color: tokens.brick }}
+          >
+            {error}
+          </div>
         )}
 
-        {/* ================= STATS ================= */}
-
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {/* Total */}
-
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-500">
-                  Total Expenses
-                </p>
-
-                <h2 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">
-                  Rs. {formatAmount(totalExpense)}
-                </h2>
-              </div>
-
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#edf3e9] text-[#637b55]">
-                <Wallet size={22} />
-              </div>
-            </div>
+        {success && !lastExpense && (
+          <div
+            className="mb-5 rounded-xl px-4 py-3 text-sm"
+            style={{ background: tokens.tealSoft, color: tokens.tealDark }}
+          >
+            {success}
           </div>
+        )}
 
-          {/* Count */}
-
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-500">
-                  Transactions
+        {success && lastExpense && (
+          <div
+            className="mb-6 overflow-hidden rounded-2xl"
+            style={{ background: tokens.surface, border: `1px solid ${tokens.border}` }}
+          >
+            <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p
+                  className="text-xs font-semibold uppercase tracking-wider"
+                  style={{ color: tokens.teal }}
+                >
+                  Added to the ledger
                 </p>
-
-                <h2 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">
-                  {expenses.length}
-                </h2>
-              </div>
-
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <Receipt size={22} />
-              </div>
-            </div>
-          </div>
-
-          {/* Average */}
-
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-gray-500">
-                  Average Expense
+                <p className="mt-1 truncate font-display text-lg font-semibold" style={{ color: tokens.ink }}>
+                  {lastExpense.title}
                 </p>
-
-                <h2 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">
-                  Rs. {formatAmount(averageExpense)}
-                </h2>
+                <p className="mt-0.5 text-xs" style={{ color: tokens.muted }}>
+                  {lastExpense.category} ·{" "}
+                  {new Date(lastExpense.date).toLocaleDateString(undefined, {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </p>
               </div>
 
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
-                <Split size={22} />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ================= CONTENT ================= */}
-
-        <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
-          {/* ================= EXPENSES ================= */}
-
-          <div className="min-w-0 rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="border-b border-gray-100 p-4 sm:p-5">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">
-                    Room Expenses
-                  </h2>
-
-                  <p className="mt-1 text-sm text-gray-500">
-                    Track all expenses shared in this room
-                  </p>
-                </div>
-
-                <div className="relative w-full sm:w-64">
-                  <Search
-                    size={17}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  />
-
-                  <input
-                    type="text"
-                    placeholder="Search expenses..."
-                    value={search}
-                    onChange={(e) =>
-                      setSearch(e.target.value)
-                    }
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-[#637b55] focus:bg-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* DESKTOP TABLE */}
-
-            <div className="hidden overflow-x-auto md:block">
-              {expenseLoading ? (
-                <div className="flex min-h-[250px] items-center justify-center">
-                  <Loader2
-                    className="animate-spin text-[#637b55]"
-                    size={28}
-                  />
-                </div>
-              ) : filteredExpenses.length === 0 ? (
-                <EmptyExpenses
-                  onAdd={() => setShowExpenseModal(true)}
-                />
-              ) : (
-                <table className="w-full min-w-[700px]">
-                  <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50/70 text-left text-xs uppercase tracking-wide text-gray-500">
-                      <th className="px-5 py-3 font-semibold">
-                        Expense
-                      </th>
-
-                      <th className="px-5 py-3 font-semibold">
-                        Category
-                      </th>
-
-                      <th className="px-5 py-3 font-semibold">
-                        Date
-                      </th>
-
-                      <th className="px-5 py-3 text-right font-semibold">
-                        Amount
-                      </th>
-
-                      {isAdmin && (
-                        <th className="px-5 py-3 text-right">
-                          Action
-                        </th>
-                      )}
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {filteredExpenses.map((item) => {
-                      const Icon = getCategoryIcon(
-                        item.category
-                      );
-
-                      return (
-                        <tr
-                          key={item._id}
-                          className="border-b border-gray-100 last:border-0 hover:bg-gray-50/60"
-                        >
-                          <td className="px-5 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf3e9] text-[#637b55]">
-                                <Icon size={19} />
-                              </div>
-
-                              <div className="min-w-0">
-                                <p className="truncate font-semibold text-gray-900">
-                                  {item.title}
-                                </p>
-
-                                {item.createdBy?.name && (
-                                  <p className="mt-0.5 text-xs text-gray-500">
-                                    Added by{" "}
-                                    {item.createdBy.name}
-                                  </p>
-                                )}
-
-                                {item.split && (
-                                  <div className="mt-1 flex items-center gap-1 text-xs text-purple-600">
-                                    <Split size={12} />
-                                    Split expense
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
-                              {item.category}
-                            </span>
-                          </td>
-
-                          <td className="px-5 py-4 text-sm text-gray-500">
-                            {formatDate(item.date)}
-                          </td>
-
-                          <td className="px-5 py-4 text-right font-bold text-gray-900">
-                            Rs. {formatAmount(item.amount)}
-                          </td>
-
-                          {isAdmin && (
-                            <td className="px-5 py-4 text-right">
-                              <button
-                                onClick={() =>
-                                  handleDeleteExpense(
-                                    item._id
-                                  )
-                                }
-                                className="rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
-                              >
-                                <Trash2 size={17} />
-                              </button>
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            {/* MOBILE EXPENSE CARDS */}
-
-            <div className="space-y-3 p-4 md:hidden">
-              {expenseLoading ? (
-                <div className="flex min-h-[250px] items-center justify-center">
-                  <Loader2
-                    className="animate-spin text-[#637b55]"
-                    size={28}
-                  />
-                </div>
-              ) : filteredExpenses.length === 0 ? (
-                <EmptyExpenses
-                  onAdd={() => setShowExpenseModal(true)}
-                />
-              ) : (
-                filteredExpenses.map((item) => {
-                  const Icon = getCategoryIcon(
-                    item.category
-                  );
-
-                  return (
+              <div className="flex items-center gap-4">
+                {lastExpense.payer && (
+                  <div className="flex items-center gap-2.5">
                     <div
-                      key={item._id}
-                      className="rounded-xl border border-gray-100 bg-gray-50/50 p-4"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                      style={{ background: tokens.tealSoft, color: tokens.tealDark }}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf3e9] text-[#637b55]">
-                            <Icon size={18} />
-                          </div>
-
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-gray-900">
-                              {item.title}
-                            </p>
-
-                            <p className="text-xs text-gray-500">
-                              {formatDate(item.date)}
-                            </p>
-                          </div>
-                        </div>
-
-                        {isAdmin && (
-                          <button
-                            onClick={() =>
-                              handleDeleteExpense(
-                                item._id
-                              )
-                            }
-                            className="shrink-0 rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-500"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="mt-4 flex items-center justify-between">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-600">
-                            {item.category}
-                          </span>
-
-                          {item.split && (
-                            <span className="flex items-center gap-1 rounded-full bg-purple-50 px-2.5 py-1 text-xs font-medium text-purple-600">
-                              <Split size={12} />
-                              Split
-                            </span>
-                          )}
-                        </div>
-
-                        <p className="font-bold text-gray-900">
-                          Rs. {formatAmount(item.amount)}
-                        </p>
-                      </div>
+                      {lastExpense.payer.name.charAt(0).toUpperCase()}
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* ================= MEMBERS ================= */}
-
-          <aside className="h-fit rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-gray-100 p-5">
-              <div>
-                <h2 className="font-bold text-gray-900">
-                  Members
-                </h2>
-
-                <p className="mt-1 text-xs text-gray-500">
-                  {members.length + 1} people
+                    <div className="min-w-0 text-left">
+                      <p className="text-[11px]" style={{ color: tokens.muted }}>Paid by</p>
+                      <p className="truncate text-sm font-medium" style={{ color: tokens.ink }}>
+                        {lastExpense.payer.name}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <p className="font-display num text-xl font-semibold" style={{ color: tokens.ink }}>
+                  Rs. {lastExpense.amount.toFixed(2)}
                 </p>
               </div>
-
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#edf3e9] text-[#637b55]">
-                <Users size={19} />
-              </div>
             </div>
+          </div>
+        )}
 
-            <div className="max-h-[430px] space-y-2 overflow-y-auto p-4">
-              {/* ADMIN */}
-
-              <div className="flex items-center gap-3 rounded-xl bg-[#f5f8f3] p-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#637b55] text-sm font-bold text-white">
-                  {getInitials(adminName)}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-gray-900">
-                    {adminName}
-                  </p>
-
-                  <p className="truncate text-xs text-gray-500">
-                    {adminEmail}
-                  </p>
-                </div>
-
-                <span className="shrink-0 rounded-full bg-[#637b55]/10 px-2 py-1 text-[10px] font-bold uppercase text-[#637b55]">
-                  Admin
+        {/* Main content */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+          {/* Members */}
+          <section
+            className="overflow-hidden rounded-2xl lg:col-span-2"
+            style={{ background: tokens.surface, border: `1px solid ${tokens.border}` }}
+          >
+            <button
+              type="button"
+              onClick={() => setMembersOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between px-5 py-4 text-left"
+            >
+              <h2 className="flex items-center gap-2 text-sm font-semibold" style={{ color: tokens.ink }}>
+                <Users size={15} style={{ color: tokens.muted }} />
+                Members
+                <span className="font-normal" style={{ color: tokens.muted }}>
+                  ({members.length})
                 </span>
-              </div>
+              </h2>
+              <ChevronDown
+                size={16}
+                style={{
+                  color: tokens.muted,
+                  transform: membersOpen ? "rotate(180deg)" : "none",
+                  transition: "transform 150ms ease",
+                }}
+              />
+            </button>
 
-              {/* MEMBERS */}
-
-              {members.map((member, index) => {
-                const memberName =
-                  member.user?.name ||
-                  member.email?.split("@")[0] ||
-                  "Member";
-
-                return (
-                  <div
-                    key={
-                      member.user?._id ||
-                      member.email ||
-                      index
-                    }
-                    className="group flex items-center gap-3 rounded-xl p-3 transition hover:bg-gray-50"
+            {membersOpen && (
+              <ul style={{ borderTop: `1px solid ${tokens.border}` }}>
+                {members.map((member, i) => (
+                  <li
+                    key={member.id}
+                    className="flex items-center gap-3 px-5 py-3.5"
+                    style={{
+                      borderBottom:
+                        i === members.length - 1 ? "none" : `1px solid ${tokens.border}`,
+                    }}
                   >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm font-semibold text-gray-600">
-                      {getInitials(memberName)}
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
+                      style={{ background: avatarPalette[i % avatarPalette.length] }}
+                    >
+                      {member.name.charAt(0).toUpperCase()}
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-gray-800">
-                        {memberName}
-                      </p>
-
-                      <p className="truncate text-xs text-gray-500">
+                      <div className="flex items-center gap-1.5">
+                        <p className="truncate text-sm font-medium" style={{ color: tokens.ink }}>
+                          {member.name}
+                        </p>
+                        {member.isAdmin && (
+                          <span
+                            className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                            style={{ background: tokens.tealSoft, color: tokens.tealDark }}
+                          >
+                            Admin
+                          </span>
+                        )}
+                      </div>
+                      <p className="truncate text-xs" style={{ color: tokens.muted }}>
                         {member.email}
                       </p>
                     </div>
 
-                    {isAdmin && (
+                    {!member.isAdmin && (
                       <button
-                        onClick={() =>
-                          handleRemoveMember(
-                            member.email
-                          )
-                        }
-                        className="rounded-lg p-2 text-gray-300 opacity-100 transition hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100"
+                        type="button"
+                        onClick={() => handleRemoveMember(member.id)}
+                        className="rounded-lg p-1.5 transition"
+                        style={{ color: tokens.muted }}
+                        title="Remove member"
                       >
                         <Trash2 size={15} />
                       </button>
                     )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* Add Expense */}
+          <section
+            className="overflow-hidden rounded-2xl lg:col-span-3"
+            style={{ background: tokens.surface, border: `1px solid ${tokens.border}` }}
+          >
+            <div className="px-5 py-4" style={{ borderBottom: `1px solid ${tokens.border}` }}>
+              <h2 className="text-sm font-semibold" style={{ color: tokens.ink }}>
+                Add an expense
+              </h2>
+              <p className="text-xs" style={{ color: tokens.muted }}>
+                Split equally across all {members.length} members
+              </p>
+            </div>
+
+            <form onSubmit={handleAddExpense} className="p-5">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-xs font-medium" style={{ color: tokens.muted }}>
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    name="title"
+                    value={expense.title}
+                    onChange={handleExpenseChange}
+                    placeholder="e.g. Dinner"
+                    className="field w-full rounded-lg px-3 py-2.5 text-sm transition"
+                    style={{ border: `1px solid ${tokens.border}`, color: tokens.ink }}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium" style={{ color: tokens.muted }}>
+                    Amount
+                  </label>
+                  <div className="relative">
+                    <span
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm"
+                      style={{ color: tokens.muted }}
+                    >
+                      Rs.
+                    </span>
+                    <input
+                      type="number"
+                      name="amount"
+                      min="1"
+                      step="0.01"
+                      value={expense.amount}
+                      onChange={handleExpenseChange}
+                      placeholder="1500"
+                      className="field num w-full rounded-lg py-2.5 pl-10 pr-3 text-sm transition"
+                      style={{ border: `1px solid ${tokens.border}`, color: tokens.ink }}
+                    />
                   </div>
-                );
-              })}
-
-              {members.length === 0 && (
-                <div className="py-8 text-center">
-                  <Users
-                    size={28}
-                    className="mx-auto text-gray-300"
-                  />
-
-                  <p className="mt-2 text-sm text-gray-500">
-                    No members added yet
-                  </p>
                 </div>
-              )}
-            </div>
-          </aside>
-        </section>
-      </main>
 
-      {/* ======================================================
-          ADD EXPENSE MODAL
-      ====================================================== */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium" style={{ color: tokens.muted }}>
+                    Category
+                  </label>
+                  <div className="relative">
+                    <select
+                      name="category"
+                      value={expense.category}
+                      onChange={handleExpenseChange}
+                      className="field w-full appearance-none rounded-lg px-3 py-2.5 pr-9 text-sm transition"
+                      style={{ border: `1px solid ${tokens.border}`, color: tokens.ink }}
+                    >
+                      {categories.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={15}
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+                      style={{ color: tokens.muted }}
+                    />
+                  </div>
+                </div>
 
-      {showExpenseModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="max-h-[95vh] w-full overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:max-w-lg sm:rounded-2xl">
-            {/* Modal header */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium" style={{ color: tokens.muted }}>
+                    Paid by
+                  </label>
+                  <div className="relative">
+                    <select
+                      name="paidBy"
+                      value={expense.paidBy}
+                      onChange={handleExpenseChange}
+                      className="field w-full appearance-none rounded-lg px-3 py-2.5 pr-9 text-sm transition"
+                      style={{ border: `1px solid ${tokens.border}`, color: tokens.ink }}
+                    >
+                      {members.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={15}
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+                      style={{ color: tokens.muted }}
+                    />
+                  </div>
+                </div>
 
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white px-5 py-4 sm:px-6">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  Add Expense
-                </h2>
-
-                <p className="mt-0.5 text-xs text-gray-500">
-                  Add an expense to {room.name}
-                </p>
-              </div>
-
-              <button
-                onClick={() =>
-                  setShowExpenseModal(false)
-                }
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200"
-              >
-                <X size={19} />
-              </button>
-            </div>
-
-            <form
-              onSubmit={handleSubmitExpense}
-              className="space-y-5 p-5 sm:p-6"
-            >
-              {/* Title */}
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                  Expense Title
-                </label>
-
-                <input
-                  type="text"
-                  name="title"
-                  placeholder="e.g. Monthly groceries"
-                  value={expense.title}
-                  onChange={handleExpenseChange}
-                  minLength={2}
-                  maxLength={50}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-[#637b55] focus:bg-white"
-                />
-              </div>
-
-              {/* Amount */}
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                  Amount
-                </label>
-
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-400">
-                    Rs.
-                  </span>
-
+                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-xs font-medium" style={{ color: tokens.muted }}>
+                    Date
+                  </label>
                   <input
-                    type="number"
-                    name="amount"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    value={expense.amount}
-                    onChange={handleExpenseChange}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-12 pr-4 text-sm outline-none transition focus:border-[#637b55] focus:bg-white"
-                  />
-                </div>
-              </div>
-
-              {/* Category */}
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                  Category
-                </label>
-
-                <div className="relative">
-                  <select
-                    name="category"
-                    value={expense.category}
-                    onChange={handleExpenseChange}
-                    className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-sm outline-none transition focus:border-[#637b55] focus:bg-white"
-                  >
-                    <option value="">
-                      Select category
-                    </option>
-
-                    {categories.map((category) => (
-                      <option
-                        key={category.name}
-                        value={category.name}
-                      >
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  <ChevronDown
-                    size={17}
-                    className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
-                  />
-                </div>
-              </div>
-
-              {/* Date */}
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                  Date
-                </label>
-
-                <div
-                  className="relative cursor-pointer"
-                  onClick={openDatePicker}
-                >
-                  <input
-                    ref={dateRef}
                     type="date"
                     name="date"
                     value={expense.date}
+                    max={new Date().toISOString().split("T")[0]}
                     onChange={handleExpenseChange}
-                    max={
-                      new Date(
-                        Date.now() -
-                          new Date().getTimezoneOffset() *
-                            60000
-                      )
-                        .toISOString()
-                        .split("T")[0]
-                    }
-                    className="w-full cursor-pointer rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-[#637b55] focus:bg-white"
-                    style={{
-                      colorScheme: "light",
-                    }}
-                  />
-
-                  <Calendar
-                    size={18}
-                    className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+                    className="field w-full rounded-lg px-3 py-2.5 text-sm transition"
+                    style={{ border: `1px solid ${tokens.border}`, color: tokens.ink }}
                   />
                 </div>
               </div>
 
-              {/* SPLIT */}
-
-              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
-                      <Split size={19} />
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-bold text-gray-800">
-                        Split this expense
-                      </p>
-
-                      <p className="text-xs text-gray-500">
-                        Share this expense with members
-                      </p>
-                    </div>
-                  </div>
-
+              {/* Split preview — receipt style */}
+              <div className="mt-6 overflow-hidden rounded-xl" style={{ border: `1px solid ${tokens.border}` }}>
+                <div className="flex items-center justify-between px-4 pb-3 pt-4" style={{ background: tokens.surface }}>
+                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: tokens.muted }}>
+                    Split preview
+                  </span>
                   <button
                     type="button"
-                    onClick={handleSplitToggle}
-                    className={`relative h-6 w-11 rounded-full transition ${
-                      expense.split
-                        ? "bg-[#637b55]"
-                        : "bg-gray-300"
-                    }`}
+                    onClick={() => setSplitOpen((prev) => !prev)}
+                    aria-pressed={splitOpen}
+                    aria-label="Toggle split preview"
+                    className="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition"
+                    style={{ background: splitOpen ? tokens.teal : tokens.border }}
                   >
                     <span
-                      className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${
-                        expense.split
-                          ? "left-6"
-                          : "left-1"
-                      }`}
+                      className="inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition"
+                      style={{ transform: splitOpen ? "translateX(18px)" : "translateX(4px)" }}
                     />
                   </button>
                 </div>
 
-                {/* MEMBER SELECTION */}
-
-                {expense.split && (
-                  <div className="mt-4 border-t border-gray-200 pt-4">
-                    <div className="mb-3 flex items-center justify-between">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        Split with
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setExpense((prev) => ({
-                            ...prev,
-                            splitMembers:
-                              members.map(
-                                (member) =>
-                                  member.email
-                              ),
-                          }))
-                        }
-                        className="text-xs font-semibold text-[#637b55]"
-                      >
-                        Select all
-                      </button>
-                    </div>
-
-                    <div className="max-h-40 space-y-2 overflow-y-auto">
-                      {/* Current user */}
-
-                      <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-white p-3">
-                        <input
-                          type="checkbox"
-                          checked={expense.splitMembers.includes(
-                            currentUser.email
-                          )}
-                          onChange={() =>
-                            toggleSplitMember(
-                              currentUser.email
-                            )
-                          }
-                          className="h-4 w-4 accent-[#637b55]"
-                        />
-
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#637b55] text-xs font-bold text-white">
-                          {getInitials(
-                            currentUser.name ||
-                              currentUser.email
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">
-                            {currentUser.name ||
-                              "You"}
-                          </p>
-
-                          <p className="truncate text-xs text-gray-400">
-                            {currentUser.email}
-                          </p>
-                        </div>
-
-                        <span className="ml-auto text-xs text-gray-400">
-                          You
-                        </span>
-                      </label>
-
+                {splitOpen && (
+                  <div className="px-4 pb-4" style={{ background: tokens.surface }}>
+                    <div className="space-y-1.5">
                       {members.map((member) => (
-                        <label
-                          key={member.email}
-                          className="flex cursor-pointer items-center gap-3 rounded-xl bg-white p-3"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={expense.splitMembers.includes(
-                              member.email
-                            )}
-                            onChange={() =>
-                              toggleSplitMember(
-                                member.email
-                              )
-                            }
-                            className="h-4 w-4 accent-[#637b55]"
-                          />
-
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">
-                            {getInitials(
-                              member.user?.name ||
-                                member.email
-                            )}
-                          </div>
-
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">
-                              {member.user?.name ||
-                                member.email.split(
-                                  "@"
-                                )[0]}
-                            </p>
-
-                            <p className="truncate text-xs text-gray-400">
-                              {member.email}
-                            </p>
-                          </div>
-                        </label>
+                        <div key={member.id} className="flex items-center justify-between text-sm">
+                          <span style={{ color: tokens.ink }}>{member.name}</span>
+                          <span className="num font-medium" style={{ color: tokens.ink }}>
+                            Rs. {Number.isFinite(splitAmount) ? splitAmount.toFixed(2) : "0.00"}
+                          </span>
+                        </div>
                       ))}
                     </div>
-
-                    {expense.amount &&
-                      expense.splitMembers.length >
-                        0 && (
-                        <div className="mt-3 rounded-xl bg-purple-50 p-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-purple-600">
-                              Each person pays
-                            </span>
-
-                            <span className="font-bold text-purple-700">
-                              Rs.{" "}
-                              {formatAmount(
-                                Number(
-                                  expense.amount
-                                ) /
-                                  expense
-                                    .splitMembers
-                                    .length
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      )}
                   </div>
                 )}
-              </div>
-
-              {/* BUTTONS */}
-
-              <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowExpenseModal(false)
-                  }
-                  className="w-full rounded-xl bg-gray-100 px-5 py-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-200 sm:w-auto"
+                <div className="tear" />
+                <div
+                  className="flex items-center justify-between px-4 py-3"
+                  style={{ background: tokens.ink }}
                 >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={expenseLoading}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#334e35] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#263c28] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                >
-                  {expenseLoading && (
-                    <Loader2
-                      size={17}
-                      className="animate-spin"
-                    />
-                  )}
-
-                  Save Expense
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================
-          ADD MEMBER MODAL
-      ====================================================== */}
-
-      {showMemberModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="w-full rounded-t-3xl bg-white shadow-2xl sm:max-w-md sm:rounded-2xl">
-            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  Add Member
-                </h2>
-
-                <p className="mt-1 text-xs text-gray-500">
-                  Add a registered user to this room
-                </p>
+                  <span className="text-sm font-medium text-white">Total</span>
+                  <span className="font-display num text-lg font-semibold" style={{ color: tokens.gold }}>
+                    Rs. {Number(expense.amount || 0).toFixed(2)}
+                  </span>
+                </div>
               </div>
 
               <button
-                onClick={() =>
-                  setShowMemberModal(false)
-                }
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200"
+                type="submit"
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.99]"
+                style={{ background: tokens.teal }}
               >
-                <X size={19} />
+                <Plus size={16} />
+                Add expense
+              </button>
+            </form>
+          </section>
+        </div>
+      </div>
+
+      {/* Add Member Modal */}
+      {showAddMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl" style={{ background: tokens.surface }}>
+            <div
+              className="flex items-center justify-between px-5 py-4"
+              style={{ borderBottom: `1px solid ${tokens.border}` }}
+            >
+              <h2 className="font-display text-base font-semibold" style={{ color: tokens.ink }}>
+                Add room member
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddMember(false);
+                  setMemberEmail("");
+                  setError("");
+                }}
+                className="rounded-lg p-1"
+                style={{ color: tokens.muted }}
+              >
+                <X size={18} />
               </button>
             </div>
 
-            <form
-              onSubmit={handleAddMember}
-              className="space-y-5 p-5 sm:p-6"
-            >
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                  Member Email
-                </label>
-
+            <form onSubmit={handleAddMember} className="p-5">
+              <label className="mb-1.5 block text-xs font-medium" style={{ color: tokens.muted }}>
+                Email
+              </label>
+              <div className="relative">
+                <Mail
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2"
+                  style={{ color: tokens.muted }}
+                />
                 <input
                   type="email"
                   value={memberEmail}
-                  onChange={(e) =>
-                    setMemberEmail(e.target.value)
-                  }
-                  placeholder="member@example.com"
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-[#637b55] focus:bg-white"
+                  onChange={(e) => setMemberEmail(e.target.value)}
+                  placeholder="user@example.com"
                   autoFocus
+                  className="field w-full rounded-lg py-2.5 pl-9 pr-3 text-sm transition"
+                  style={{ border: `1px solid ${tokens.border}`, color: tokens.ink }}
                 />
-
-                <p className="mt-2 text-xs text-gray-400">
-                  The user must already have an account.
-                </p>
               </div>
+              <p className="mt-1.5 text-xs" style={{ color: tokens.muted }}>
+                The user must already have an account.
+              </p>
 
-              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              {error && (
+                <div
+                  className="mt-3 rounded-lg px-3 py-2 text-xs"
+                  style={{ background: tokens.brickSoft, color: tokens.brick }}
+                >
+                  {error}
+                </div>
+              )}
+
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowMemberModal(false)
-                  }
-                  className="w-full rounded-xl bg-gray-100 px-5 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-200 sm:w-auto"
+                  onClick={() => {
+                    setShowAddMember(false);
+                    setMemberEmail("");
+                    setError("");
+                  }}
+                  className="w-full rounded-full px-4 py-2.5 text-sm font-medium transition sm:w-auto"
+                  style={{ border: `1px solid ${tokens.border}`, color: tokens.ink }}
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
-                  disabled={memberLoading}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#637b55] px-6 py-3 text-sm font-semibold text-white hover:bg-[#536947] disabled:opacity-60 sm:w-auto"
+                  className="flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-white transition sm:w-auto"
+                  style={{ background: tokens.teal }}
                 >
-                  {memberLoading && (
-                    <Loader2
-                      size={17}
-                      className="animate-spin"
-                    />
-                  )}
-
-                  <UserPlus size={17} />
-
-                  Add Member
+                  <UserPlus size={15} />
+                  Add
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-/* ============================================================
-   EMPTY EXPENSES
-============================================================ */
-
-function EmptyExpenses({ onAdd }) {
-  return (
-    <div className="flex min-h-[300px] flex-col items-center justify-center px-5 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#edf3e9] text-[#637b55]">
-        <Receipt size={26} />
-      </div>
-
-      <h3 className="mt-4 font-bold text-gray-900">
-        No expenses yet
-      </h3>
-
-      <p className="mt-1 max-w-xs text-sm text-gray-500">
-        Add your first room expense to start tracking
-        shared spending.
-      </p>
-
-      <button
-        onClick={onAdd}
-        className="mt-5 flex items-center gap-2 rounded-xl bg-[#334e35] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#263c28]"
-      >
-        <Plus size={17} />
-        Add Expense
-      </button>
     </div>
   );
 }
