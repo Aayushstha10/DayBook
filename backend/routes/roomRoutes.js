@@ -1,5 +1,4 @@
 const express = require("express");
-
 const {
   createRoom,
   getMyRoom,
@@ -9,8 +8,8 @@ const {
   createRoomExpense,
   getRoomExpenses,
 } = require("../controllers/roomController");
-
 const auth = require("../middleware/auth");
+const isRoomAdmin = require("../middleware/isRoomAdmin");
 
 const router = express.Router();
 
@@ -19,7 +18,6 @@ const router = express.Router();
 // ======================================================
 
 router.post("/rooms", auth, createRoom);
-
 router.get("/rooms/my", auth, getMyRoom);
 
 // ======================================================
@@ -29,18 +27,20 @@ router.get("/rooms/my", auth, getMyRoom);
 router.get("/users/search", auth, searchUsers);
 
 // ======================================================
-// MEMBERS
+// MEMBERS (ADMIN ONLY)
 // ======================================================
 
 router.post(
   "/rooms/:roomId/members",
   auth,
+  isRoomAdmin,
   addMember
 );
 
 router.delete(
   "/rooms/:roomId/members/:userId",
   auth,
+  isRoomAdmin,
   removeMember
 );
 

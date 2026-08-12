@@ -131,37 +131,19 @@ const searchUsers = async (req, res) => {
 
 // ======================================================
 // ADD MEMBER
-// ONLY ADMIN
+// ADMIN CHECK NOW HANDLED BY isRoomAdmin MIDDLEWARE
 // ======================================================
 
 const addMember = async (req, res) => {
   try {
-    const currentUserId = req.user.id;
-
-    const { roomId } = req.params;
     const { userId } = req.body;
+
+    const room = req.room; // set by isRoomAdmin middleware
 
     if (!userId) {
       return res.status(400).json({
         success: false,
         message: "User ID is required",
-      });
-    }
-
-    const room = await Room.findById(roomId);
-
-    if (!room) {
-      return res.status(404).json({
-        success: false,
-        message: "Room not found",
-      });
-    }
-
-    // ADMIN CHECK
-    if (room.admin.toString() !== currentUserId.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: "Only room admin can add members",
       });
     }
 
@@ -190,7 +172,7 @@ const addMember = async (req, res) => {
 
     await room.save();
 
-    const updatedRoom = await Room.findById(roomId)
+    const updatedRoom = await Room.findById(room._id)
       .populate("admin", "username email")
       .populate("members", "username email");
 
@@ -212,31 +194,16 @@ const addMember = async (req, res) => {
 
 // ======================================================
 // REMOVE MEMBER
-// ONLY ADMIN
+// ADMIN CHECK NOW HANDLED BY isRoomAdmin MIDDLEWARE
+// (self-removal check for admin still lives here —
+// it's a different concern from "is caller admin")
 // ======================================================
 
 const removeMember = async (req, res) => {
   try {
-    const currentUserId = req.user.id;
+    const { userId } = req.params;
 
-    const { roomId, userId } = req.params;
-
-    const room = await Room.findById(roomId);
-
-    if (!room) {
-      return res.status(404).json({
-        success: false,
-        message: "Room not found",
-      });
-    }
-
-    // ADMIN CHECK
-    if (room.admin.toString() !== currentUserId.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: "Only room admin can remove members",
-      });
-    }
+    const room = req.room; // set by isRoomAdmin middleware
 
     // Admin cannot remove themselves
     if (userId.toString() === room.admin.toString()) {
@@ -252,7 +219,7 @@ const removeMember = async (req, res) => {
 
     await room.save();
 
-    const updatedRoom = await Room.findById(roomId)
+    const updatedRoom = await Room.findById(room._id)
       .populate("admin", "username email")
       .populate("members", "username email");
 
@@ -312,10 +279,10 @@ const createRoomExpense = async (req, res) => {
 
     const numericAmount = Number(amount);
 
-    if (numericAmount <= 0) {
+    if (Number.isNaN(numericAmount) || numericAmount <= 0) {
       return res.status(400).json({
         success: false,
-        message: "Amount must be greater than 0",
+        message: "Amount must be a valid number greater than 0",
       });
     }
 
