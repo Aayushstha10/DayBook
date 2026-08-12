@@ -32,29 +32,36 @@ export default function ExpenseSummary() {
     fetchExpenses();
   }, []);
 
-  const fetchExpenses = async () => {
-    try {
-      setLoading(true);
-      setError("");
+ const fetchExpenses = async () => {
+  try {
+    setLoading(true);
+    setError("");
 
-      const res = await api.get(
-        "https://daybook-j903.onrender.com/api/allexpenses",
-      );
+    const token = localStorage.getItem("token");
 
-      if (Array.isArray(res.data)) {
-        setExpenses(res.data);
-      } else if (Array.isArray(res.data.expenses)) {
-        setExpenses(res.data.expenses);
-      } else {
-        setExpenses([]);
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Couldn't load expenses.");
-    } finally {
-      setLoading(false);
+    const res = await api.get(
+      "https://daybook-j903.onrender.com/api/allexpenses",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (Array.isArray(res.data)) {
+      setExpenses(res.data);
+    } else if (Array.isArray(res.data.expenses)) {
+      setExpenses(res.data.expenses);
+    } else {
+      setExpenses([]);
     }
-  };
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    setError(err.response?.data?.message || "Couldn't load expenses.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const summaries = useMemo(() => {
     const map = new Map();
@@ -137,7 +144,7 @@ export default function ExpenseSummary() {
         date: editExpense.date,
       };
 
-      const res = await axios.put(`${API}/${editExpense._id}`, payload, {
+      const res = await api.put(`${API}/${editExpense._id}`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
