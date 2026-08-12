@@ -1,7 +1,29 @@
 const mongoose = require("mongoose");
 
+const splitSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    amount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+  },
+  { _id: false },
+);
+
 const expensesSchema = new mongoose.Schema(
   {
+    room: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Room",
+      required: [true, "Room is required"],
+    },
+
     title: {
       type: String,
       required: [true, "Title is required"],
@@ -34,10 +56,16 @@ const expensesSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    split: {
+      members: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+      perPersonAmount: { type: Number },
+    },
   },
   {
     timestamps: true,
   },
 );
+
+expensesSchema.index({ room: 1, date: -1 });
 
 module.exports = mongoose.model("expenses", expensesSchema);

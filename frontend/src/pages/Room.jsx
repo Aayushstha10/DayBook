@@ -1,628 +1,1123 @@
-import React, { useMemo, useState } from "react";
-import {
-  Plus,
-  X,
-  Users,
-  Mail,
-  ChevronDown,
-  UserPlus,
-  Trash2,
-  Receipt,
-} from "lucide-react";
+import React, { useEffect, useState } from "react";
+import api from "../api";
 
-const initialMembers = [
-  { id: 1, name: "Aayush", email: "aayush@example.com", isAdmin: true },
-  { id: 2, name: "Ram", email: "ram@example.com", isAdmin: false },
-  { id: 3, name: "Sita", email: "sita@example.com", isAdmin: false },
-];
+const Room = () => {
+  // ======================================================
+  // ROOM
+  // ======================================================
 
-const categories = [
-  "Food",
-  "Transport",
-  "Shopping",
-  "Entertainment",
-  "Bills",
-  "Travel",
-  "Health",
-  "Education",
-  "Other",
-];
+  const [room, setRoom] = useState(null);
 
-const tokens = {
-  bg: "#F5F7F1",
-  ink: "#1B2620",
-  surface: "#FFFFFF",
-  border: "#E2E6DC",
-  teal: "#2F6F5E",
-  tealDark: "#24594B",
-  tealSoft: "#E7EFEA",
-  gold: "#C98A2B",
-  brick: "#BE4B3C",
-  brickSoft: "#FBEAE7",
-  muted: "#6B7568",
-};
+  // ======================================================
+  // EXPENSES
+  // ======================================================
 
-const avatarPalette = ["#2F6F5E", "#C98A2B", "#5B6EA6", "#BE4B3C", "#4E8B7A"];
+  const [expenses, setExpenses] = useState([]);
 
-export default function Room() {
-  const [members, setMembers] = useState(initialMembers);
-  const [showAddMember, setShowAddMember] = useState(false);
-  const [membersOpen, setMembersOpen] = useState(true);
-  const [splitOpen, setSplitOpen] = useState(false);
-  const [memberEmail, setMemberEmail] = useState("");
+  // ======================================================
+  // LOADING
+  // ======================================================
 
-  const [expense, setExpense] = useState({
-    title: "",
-    amount: "",
-    category: "Food",
-    date: new Date().toISOString().split("T")[0],
-    paidBy: initialMembers[0]?.id ?? "",
-  });
+  const [loading, setLoading] = useState(true);
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [lastExpense, setLastExpense] = useState(null);
+  const [expenseLoading, setExpenseLoading] = useState(false);
 
-  const splitAmount = useMemo(() => {
-    const amount = Number(expense.amount);
-    if (!amount || members.length === 0) return 0;
-    return amount / members.length;
-  }, [expense.amount, members.length]);
+  // ======================================================
+  // ADD MEMBER MODAL
+  // ======================================================
 
-  const handleExpenseChange = (e) => {
-    const { name, value } = e.target;
-    setExpense((prev) => ({ ...prev, [name]: value }));
+  const [showMemberModal, setShowMemberModal] = useState(false);
+
+  const [search, setSearch] = useState("");
+
+  const [users, setUsers] = useState([]);
+
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  // ======================================================
+  // EXPENSE FORM
+  // ======================================================
+
+  const [title, setTitle] = useState("");
+
+  const [amount, setAmount] = useState("");
+
+  const [date, setDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+
+  const [category, setCategory] = useState("");
+
+  const [paidBy, setPaidBy] = useState("");
+
+  const [selectedMembers, setSelectedMembers] = useState([]);
+
+  // ======================================================
+  // GET ROOM
+  // ======================================================
+
+  const fetchRoom = async () => {
+    try {
+      setLoading(true);
+
+      const response = await api.get("/rooms/my");
+
+      setRoom(response.data.room);
+
+      // Default paid by current logged user
+      const currentUser = JSON.parse(
+        localStorage.getItem("user")
+      );
+
+      if (currentUser?._id) {
+        setPaidBy(currentUser._id);
+      }
+    } catch (error) {
+      console.error("ROOM ERROR:", error);
+
+      alert(
+        error.response?.data?.message ||
+          "Failed to load room"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddMember = (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
+  // ======================================================
+  // GET EXPENSES
+  // ======================================================
 
-    const email = memberEmail.trim().toLowerCase();
-    if (!email) return setError("Please enter an email address.");
-    if (!email.includes("@")) return setError("Please enter a valid email address.");
+  const fetchExpenses = async (roomId) => {
+    try {
+      const response = await api.get(
+        `/rooms/${roomId}/expenses`
+      );
 
-    const alreadyExists = members.some((m) => m.email.toLowerCase() === email);
-    if (alreadyExists) return setError("This user is already a room member.");
+      setExpenses(response.data.expenses || []);
+    } catch (error) {
+      console.error("EXPENSE ERROR:", error);
 
-    const newMember = {
-      id: Date.now(),
-      name: email.split("@")[0],
-      email,
-      isAdmin: false,
-    };
+      setExpenses([]);
 
-    setMembers((prev) => [...prev, newMember]);
-    setMemberEmail("");
-    setShowAddMember(false);
-    setLastExpense(null);
-    setSuccess("Member added successfully.");
+      alert(
+        error.response?.data?.message ||
+          "Failed to load expenses"
+      );
+    }
   };
 
-  const handleRemoveMember = (id) => {
-    const member = members.find((m) => m.id === id);
-    if (member?.isAdmin) return setError("The room admin cannot be removed.");
-    setLastExpense(null);
-    setSuccess("");
-    setMembers((prev) => prev.filter((m) => m.id !== id));
-  };
+  // ======================================================
+  // INITIAL LOAD
+  // ======================================================
 
-  const handleAddExpense = (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
 
-    if (!expense.title.trim()) return setError("Please enter an expense title.");
-    if (!expense.amount || Number(expense.amount) <= 0)
-      return setError("Please enter a valid amount.");
-    if (!expense.date) return setError("Please select a date.");
-    if (members.length === 0) return setError("There are no members in this room.");
-    if (!expense.paidBy) return setError("Please select who paid.");
+        const response = await api.get("/rooms/my");
 
-    const payer = members.find((m) => m.id === Number(expense.paidBy));
+        const currentRoom = response.data.room;
 
-    const expenseData = {
-      ...expense,
-      amount: Number(expense.amount),
-      splitType: "equal",
-      members: members.map((m) => ({
-        user: m.id,
-        amount: Number(splitAmount.toFixed(2)),
-      })),
-    };
+        setRoom(currentRoom);
 
-    console.log("Expense:", expenseData);
-    setSuccess("Expense added successfully.");
-    setLastExpense({
-      title: expense.title,
-      amount: Number(expense.amount),
-      category: expense.category,
-      date: expense.date,
-      payer,
-    });
-    setExpense({
-      title: "",
-      amount: "",
-      category: "Food",
-      date: new Date().toISOString().split("T")[0],
-      paidBy: members[0]?.id ?? "",
-    });
-  };
+        const currentUser = JSON.parse(
+          localStorage.getItem("user")
+        );
 
-  return (
-    <div className="min-h-screen font-body" style={{ background: tokens.bg }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
-        .font-display { font-family: 'Fraunces', Georgia, serif; }
-        .font-body { font-family: 'Inter', system-ui, sans-serif; }
-        .num { font-variant-numeric: tabular-nums; }
-        .field:focus { outline: none; border-color: ${tokens.teal} !important; box-shadow: 0 0 0 3px ${tokens.tealSoft}; }
-        .tear {
-          height: 10px;
-          background-image:
-            linear-gradient(135deg, ${tokens.surface} 25%, transparent 25%),
-            linear-gradient(225deg, ${tokens.surface} 25%, transparent 25%);
-          background-size: 14px 14px;
-          background-position: 0 0;
+        if (currentUser?._id) {
+          setPaidBy(currentUser._id);
+
+          setSelectedMembers([currentUser._id]);
         }
-      `}</style>
 
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
-              style={{ background: tokens.teal, color: "#fff" }}
-            >
-              <Receipt size={19} />
-            </div>
-            <div>
-              <h1 className="font-display text-2xl font-semibold" style={{ color: tokens.ink }}>
-                Daybook
-              </h1>
-              <p className="text-sm" style={{ color: tokens.muted }}>
-                Track shared spending, split evenly, settle up
-              </p>
-            </div>
-          </div>
+        await fetchExpenses(currentRoom._id);
+      } catch (error) {
+        console.error("LOAD ROOM ERROR:", error);
 
-          <button
-            type="button"
-            onClick={() => {
-              setError("");
-              setShowAddMember(true);
-            }}
-            className="inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition active:scale-[0.97]"
-            style={{ background: tokens.ink, color: "#fff" }}
-          >
-            <UserPlus size={16} />
-            Add member
-          </button>
-        </div>
+        setRoom(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        {/* Alerts */}
-        {error && (
-          <div
-            className="mb-5 rounded-xl px-4 py-3 text-sm"
-            style={{ background: tokens.brickSoft, color: tokens.brick }}
-          >
-            {error}
-          </div>
-        )}
+    loadData();
+  }, []);
 
-        {success && !lastExpense && (
-          <div
-            className="mb-5 rounded-xl px-4 py-3 text-sm"
-            style={{ background: tokens.tealSoft, color: tokens.tealDark }}
-          >
-            {success}
-          </div>
-        )}
+  // ======================================================
+  // ADMIN CHECK
+  // ======================================================
 
-        {success && lastExpense && (
-          <div
-            className="mb-6 overflow-hidden rounded-2xl"
-            style={{ background: tokens.surface, border: `1px solid ${tokens.border}` }}
-          >
-            <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p
-                  className="text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: tokens.teal }}
-                >
-                  Added to the ledger
-                </p>
-                <p className="mt-1 truncate font-display text-lg font-semibold" style={{ color: tokens.ink }}>
-                  {lastExpense.title}
-                </p>
-                <p className="mt-0.5 text-xs" style={{ color: tokens.muted }}>
-                  {lastExpense.category} ·{" "}
-                  {new Date(lastExpense.date).toLocaleDateString(undefined, {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </p>
-              </div>
+  const currentUser = JSON.parse(
+    localStorage.getItem("user")
+  );
 
-              <div className="flex items-center gap-4">
-                {lastExpense.payer && (
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-                      style={{ background: tokens.tealSoft, color: tokens.tealDark }}
-                    >
-                      {lastExpense.payer.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 text-left">
-                      <p className="text-[11px]" style={{ color: tokens.muted }}>Paid by</p>
-                      <p className="truncate text-sm font-medium" style={{ color: tokens.ink }}>
-                        {lastExpense.payer.name}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                <p className="font-display num text-xl font-semibold" style={{ color: tokens.ink }}>
-                  Rs. {lastExpense.amount.toFixed(2)}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+  const isAdmin =
+    room &&
+    currentUser &&
+    room.admin?._id?.toString() ===
+      currentUser?._id?.toString();
 
-        {/* Main content */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-          {/* Members */}
-          <section
-            className="overflow-hidden rounded-2xl lg:col-span-2"
-            style={{ background: tokens.surface, border: `1px solid ${tokens.border}` }}
-          >
-            <button
-              type="button"
-              onClick={() => setMembersOpen((prev) => !prev)}
-              className="flex w-full items-center justify-between px-5 py-4 text-left"
-            >
-              <h2 className="flex items-center gap-2 text-sm font-semibold" style={{ color: tokens.ink }}>
-                <Users size={15} style={{ color: tokens.muted }} />
-                Members
-                <span className="font-normal" style={{ color: tokens.muted }}>
-                  ({members.length})
-                </span>
-              </h2>
-              <ChevronDown
-                size={16}
-                style={{
-                  color: tokens.muted,
-                  transform: membersOpen ? "rotate(180deg)" : "none",
-                  transition: "transform 150ms ease",
-                }}
-              />
-            </button>
+  // ======================================================
+  // SEARCH USERS
+  // ======================================================
 
-            {membersOpen && (
-              <ul style={{ borderTop: `1px solid ${tokens.border}` }}>
-                {members.map((member, i) => (
-                  <li
-                    key={member.id}
-                    className="flex items-center gap-3 px-5 py-3.5"
-                    style={{
-                      borderBottom:
-                        i === members.length - 1 ? "none" : `1px solid ${tokens.border}`,
-                    }}
-                  >
-                    <div
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
-                      style={{ background: avatarPalette[i % avatarPalette.length] }}
-                    >
-                      {member.name.charAt(0).toUpperCase()}
-                    </div>
+  const handleSearchUsers = async () => {
+    if (!search.trim()) {
+      setUsers([]);
+      return;
+    }
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <p className="truncate text-sm font-medium" style={{ color: tokens.ink }}>
-                          {member.name}
-                        </p>
-                        {member.isAdmin && (
-                          <span
-                            className="rounded-full px-2 py-0.5 text-[10px] font-medium"
-                            style={{ background: tokens.tealSoft, color: tokens.tealDark }}
-                          >
-                            Admin
-                          </span>
-                        )}
-                      </div>
-                      <p className="truncate text-xs" style={{ color: tokens.muted }}>
-                        {member.email}
-                      </p>
-                    </div>
+    try {
+      setSearchLoading(true);
 
-                    {!member.isAdmin && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveMember(member.id)}
-                        className="rounded-lg p-1.5 transition"
-                        style={{ color: tokens.muted }}
-                        title="Remove member"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+      const response = await api.get(
+        `/users/search?search=${encodeURIComponent(search)}`
+      );
 
-          {/* Add Expense */}
-          <section
-            className="overflow-hidden rounded-2xl lg:col-span-3"
-            style={{ background: tokens.surface, border: `1px solid ${tokens.border}` }}
-          >
-            <div className="px-5 py-4" style={{ borderBottom: `1px solid ${tokens.border}` }}>
-              <h2 className="text-sm font-semibold" style={{ color: tokens.ink }}>
-                Add an expense
-              </h2>
-              <p className="text-xs" style={{ color: tokens.muted }}>
-                Split equally across all {members.length} members
-              </p>
-            </div>
+      // Remove existing room members
+      const existingMemberIds = room.members.map(
+        (member) => member._id
+      );
 
-            <form onSubmit={handleAddExpense} className="p-5">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <label className="mb-1.5 block text-xs font-medium" style={{ color: tokens.muted }}>
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={expense.title}
-                    onChange={handleExpenseChange}
-                    placeholder="e.g. Dinner"
-                    className="field w-full rounded-lg px-3 py-2.5 text-sm transition"
-                    style={{ border: `1px solid ${tokens.border}`, color: tokens.ink }}
-                  />
-                </div>
+      const availableUsers = response.data.users.filter(
+        (user) =>
+          !existingMemberIds.includes(user._id)
+      );
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium" style={{ color: tokens.muted }}>
-                    Amount
-                  </label>
-                  <div className="relative">
-                    <span
-                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm"
-                      style={{ color: tokens.muted }}
-                    >
-                      Rs.
-                    </span>
-                    <input
-                      type="number"
-                      name="amount"
-                      min="1"
-                      step="0.01"
-                      value={expense.amount}
-                      onChange={handleExpenseChange}
-                      placeholder="1500"
-                      className="field num w-full rounded-lg py-2.5 pl-10 pr-3 text-sm transition"
-                      style={{ border: `1px solid ${tokens.border}`, color: tokens.ink }}
-                    />
-                  </div>
-                </div>
+      setUsers(availableUsers);
+    } catch (error) {
+      console.error("SEARCH USER ERROR:", error);
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium" style={{ color: tokens.muted }}>
-                    Category
-                  </label>
-                  <div className="relative">
-                    <select
-                      name="category"
-                      value={expense.category}
-                      onChange={handleExpenseChange}
-                      className="field w-full appearance-none rounded-lg px-3 py-2.5 pr-9 text-sm transition"
-                      style={{ border: `1px solid ${tokens.border}`, color: tokens.ink }}
-                    >
-                      {categories.map((category) => (
-                        <option key={category} value={category}>
-                          {category}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      size={15}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
-                      style={{ color: tokens.muted }}
-                    />
-                  </div>
-                </div>
+      setUsers([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium" style={{ color: tokens.muted }}>
-                    Paid by
-                  </label>
-                  <div className="relative">
-                    <select
-                      name="paidBy"
-                      value={expense.paidBy}
-                      onChange={handleExpenseChange}
-                      className="field w-full appearance-none rounded-lg px-3 py-2.5 pr-9 text-sm transition"
-                      style={{ border: `1px solid ${tokens.border}`, color: tokens.ink }}
-                    >
-                      {members.map((member) => (
-                        <option key={member.id} value={member.id}>
-                          {member.name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      size={15}
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
-                      style={{ color: tokens.muted }}
-                    />
-                  </div>
-                </div>
+  // ======================================================
+  // ADD MEMBER
+  // ======================================================
 
-                <div className="sm:col-span-2">
-                  <label className="mb-1.5 block text-xs font-medium" style={{ color: tokens.muted }}>
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    name="date"
-                    value={expense.date}
-                    max={new Date().toISOString().split("T")[0]}
-                    onChange={handleExpenseChange}
-                    className="field w-full rounded-lg px-3 py-2.5 text-sm transition"
-                    style={{ border: `1px solid ${tokens.border}`, color: tokens.ink }}
-                  />
-                </div>
-              </div>
+  const handleAddMember = async (userId) => {
+    try {
+      const response = await api.post(
+        `/rooms/${room._id}/members`,
+        {
+          userId,
+        }
+      );
 
-              {/* Split preview — receipt style */}
-              <div className="mt-6 overflow-hidden rounded-xl" style={{ border: `1px solid ${tokens.border}` }}>
-                <div className="flex items-center justify-between px-4 pb-3 pt-4" style={{ background: tokens.surface }}>
-                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: tokens.muted }}>
-                    Split preview
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setSplitOpen((prev) => !prev)}
-                    aria-pressed={splitOpen}
-                    aria-label="Toggle split preview"
-                    className="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition"
-                    style={{ background: splitOpen ? tokens.teal : tokens.border }}
-                  >
-                    <span
-                      className="inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition"
-                      style={{ transform: splitOpen ? "translateX(18px)" : "translateX(4px)" }}
-                    />
-                  </button>
-                </div>
+      setRoom(response.data.room);
 
-                {splitOpen && (
-                  <div className="px-4 pb-4" style={{ background: tokens.surface }}>
-                    <div className="space-y-1.5">
-                      {members.map((member) => (
-                        <div key={member.id} className="flex items-center justify-between text-sm">
-                          <span style={{ color: tokens.ink }}>{member.name}</span>
-                          <span className="num font-medium" style={{ color: tokens.ink }}>
-                            Rs. {Number.isFinite(splitAmount) ? splitAmount.toFixed(2) : "0.00"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div className="tear" />
-                <div
-                  className="flex items-center justify-between px-4 py-3"
-                  style={{ background: tokens.ink }}
-                >
-                  <span className="text-sm font-medium text-white">Total</span>
-                  <span className="font-display num text-lg font-semibold" style={{ color: tokens.gold }}>
-                    Rs. {Number(expense.amount || 0).toFixed(2)}
-                  </span>
-                </div>
-              </div>
+      setSearch("");
 
-              <button
-                type="submit"
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.99]"
-                style={{ background: tokens.teal }}
-              >
-                <Plus size={16} />
-                Add expense
-              </button>
-            </form>
-          </section>
+      setUsers([]);
+
+      alert("Member added successfully");
+    } catch (error) {
+      console.error("ADD MEMBER ERROR:", error);
+
+      alert(
+        error.response?.data?.message ||
+          "Failed to add member"
+      );
+    }
+  };
+
+  // ======================================================
+  // REMOVE MEMBER
+  // ======================================================
+
+  const handleRemoveMember = async (userId) => {
+    const confirmRemove = window.confirm(
+      "Are you sure you want to remove this member?"
+    );
+
+    if (!confirmRemove) return;
+
+    try {
+      const response = await api.delete(
+        `/rooms/${room._id}/members/${userId}`
+      );
+
+      setRoom(response.data.room);
+
+      // Remove from selected split members
+      setSelectedMembers((previous) =>
+        previous.filter((id) => id !== userId)
+      );
+
+      alert("Member removed");
+    } catch (error) {
+      console.error("REMOVE MEMBER ERROR:", error);
+
+      alert(
+        error.response?.data?.message ||
+          "Failed to remove member"
+      );
+    }
+  };
+
+  // ======================================================
+  // SELECT / UNSELECT SPLIT MEMBER
+  // ======================================================
+
+  const toggleMember = (userId) => {
+    setSelectedMembers((previous) => {
+      if (previous.includes(userId)) {
+        return previous.filter(
+          (id) => id !== userId
+        );
+      }
+
+      return [...previous, userId];
+    });
+  };
+
+  // ======================================================
+  // CALCULATE SPLIT
+  // ======================================================
+
+  const calculateSplit = () => {
+    const numericAmount = Number(amount);
+
+    if (
+      !numericAmount ||
+      numericAmount <= 0 ||
+      selectedMembers.length === 0
+    ) {
+      return [];
+    }
+
+    const share =
+      numericAmount / selectedMembers.length;
+
+    return selectedMembers.map((userId) => ({
+      userId,
+      amount: share,
+    }));
+  };
+
+  // ======================================================
+  // CREATE EXPENSE
+  // ======================================================
+
+  const handleCreateExpense = async (e) => {
+    e.preventDefault();
+
+    if (!title.trim()) {
+      alert("Please enter expense title");
+      return;
+    }
+
+    if (!amount || Number(amount) <= 0) {
+      alert("Please enter valid amount");
+      return;
+    }
+
+    if (!date) {
+      alert("Please select date");
+      return;
+    }
+
+    if (!category) {
+      alert("Please select category");
+      return;
+    }
+
+    if (!paidBy) {
+      alert("Please select who paid");
+      return;
+    }
+
+    if (selectedMembers.length === 0) {
+      alert("Select at least one member to split");
+      return;
+    }
+
+    try {
+      setExpenseLoading(true);
+
+      const response = await api.post(
+        "/rooms/expenses",
+        {
+          roomId: room._id,
+
+          title: title.trim(),
+
+          amount: Number(amount),
+
+          date,
+
+          category,
+
+          paidBy,
+
+          splitUserIds: selectedMembers,
+        }
+      );
+
+      // Add new expense at top
+      setExpenses((previous) => [
+        response.data.expense,
+        ...previous,
+      ]);
+
+      // Clear form
+      setTitle("");
+
+      setAmount("");
+
+      setCategory("");
+
+      setDate(
+        new Date().toISOString().split("T")[0]
+      );
+
+      // Keep current user as payer
+      setSelectedMembers([paidBy]);
+
+      alert("Expense added successfully");
+    } catch (error) {
+      console.error(
+        "CREATE EXPENSE ERROR:",
+        error
+      );
+
+      alert(
+        error.response?.data?.message ||
+          "Failed to create expense"
+      );
+    } finally {
+      setExpenseLoading(false);
+    }
+  };
+
+  // ======================================================
+  // LOADING UI
+  // ======================================================
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-600">
+          Loading room...
+        </p>
+      </div>
+    );
+  }
+
+  // ======================================================
+  // NO ROOM
+  // ======================================================
+
+  if (!room) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">
+            No Room Found
+          </h2>
+
+          <p className="text-gray-600">
+            You are not a member of any room yet.
+          </p>
         </div>
       </div>
+    );
+  }
 
-      {/* Add Member Modal */}
-      {showAddMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-2xl" style={{ background: tokens.surface }}>
-            <div
-              className="flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: `1px solid ${tokens.border}` }}
-            >
-              <h2 className="font-display text-base font-semibold" style={{ color: tokens.ink }}>
-                Add room member
-              </h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAddMember(false);
-                  setMemberEmail("");
-                  setError("");
-                }}
-                className="rounded-lg p-1"
-                style={{ color: tokens.muted }}
-              >
-                <X size={18} />
-              </button>
+  // ======================================================
+  // SPLIT PREVIEW
+  // ======================================================
+
+  const splitPreview = calculateSplit();
+
+  // ======================================================
+  // UI
+  // ======================================================
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+
+      <div className="max-w-6xl mx-auto">
+
+        {/* ==================================================
+            HEADER
+        ================================================== */}
+
+        <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">
+                {room.name}
+              </h1>
+
+              <p className="text-gray-500 mt-1">
+                Shared room expenses
+              </p>
             </div>
 
-            <form onSubmit={handleAddMember} className="p-5">
-              <label className="mb-1.5 block text-xs font-medium" style={{ color: tokens.muted }}>
-                Email
-              </label>
-              <div className="relative">
-                <Mail
-                  size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2"
-                  style={{ color: tokens.muted }}
-                />
-                <input
-                  type="email"
-                  value={memberEmail}
-                  onChange={(e) => setMemberEmail(e.target.value)}
-                  placeholder="user@example.com"
-                  autoFocus
-                  className="field w-full rounded-lg py-2.5 pl-9 pr-3 text-sm transition"
-                  style={{ border: `1px solid ${tokens.border}`, color: tokens.ink }}
-                />
-              </div>
-              <p className="mt-1.5 text-xs" style={{ color: tokens.muted }}>
-                The user must already have an account.
-              </p>
+            <div className="bg-yellow-50 px-4 py-2 rounded-lg">
+              👑 Admin:{" "}
+              <strong>
+                {room.admin?.username}
+              </strong>
+            </div>
 
-              {error && (
+          </div>
+
+        </div>
+
+        {/* ==================================================
+            MEMBERS
+        ================================================== */}
+
+        <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+
+          <div className="flex items-center justify-between mb-4">
+
+            <div>
+              <h2 className="text-xl font-bold">
+                Members
+              </h2>
+
+              <p className="text-gray-500 text-sm">
+                {room.members.length} members
+              </p>
+            </div>
+
+            {isAdmin && (
+              <button
+                onClick={() =>
+                  setShowMemberModal(true)
+                }
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700"
+              >
+                + Add Member
+              </button>
+            )}
+
+          </div>
+
+          <div className="space-y-3">
+
+            {room.members.map((member) => {
+
+              const memberIsAdmin =
+                member._id === room.admin?._id;
+
+              return (
                 <div
-                  className="mt-3 rounded-lg px-3 py-2 text-xs"
-                  style={{ background: tokens.brickSoft, color: tokens.brick }}
+                  key={member._id}
+                  className="flex items-center justify-between border rounded-xl p-4"
                 >
-                  {error}
+
+                  <div className="flex items-center gap-3">
+
+                    <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                      👤
+                    </div>
+
+                    <div>
+
+                      <p className="font-semibold">
+                        {member.username}
+                      </p>
+
+                      <p className="text-sm text-gray-500">
+                        {member.email}
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                  <div className="flex items-center gap-3">
+
+                    {memberIsAdmin && (
+                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">
+                        ADMIN
+                      </span>
+                    )}
+
+                    {!memberIsAdmin && isAdmin && (
+                      <button
+                        onClick={() =>
+                          handleRemoveMember(
+                            member._id
+                          )
+                        }
+                        className="text-red-500 text-sm hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    )}
+
+                  </div>
+
                 </div>
+              );
+            })}
+
+          </div>
+
+        </div>
+
+        {/* ==================================================
+            EXPENSE FORM
+        ================================================== */}
+
+        <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+
+          <h2 className="text-xl font-bold mb-6">
+            Add Expense
+          </h2>
+
+          <form
+            onSubmit={handleCreateExpense}
+            className="space-y-5"
+          >
+
+            {/* TITLE */}
+
+            <div>
+
+              <label className="block font-medium mb-2">
+                Title
+              </label>
+
+              <input
+                type="text"
+                value={title}
+                onChange={(e) =>
+                  setTitle(e.target.value)
+                }
+                placeholder="Dinner"
+                className="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+
+            </div>
+
+            {/* AMOUNT */}
+
+            <div>
+
+              <label className="block font-medium mb-2">
+                Amount
+              </label>
+
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={amount}
+                onChange={(e) =>
+                  setAmount(e.target.value)
+                }
+                placeholder="2000"
+                className="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+
+            </div>
+
+            {/* DATE */}
+
+            <div>
+
+              <label className="block font-medium mb-2">
+                Date
+              </label>
+
+              <input
+                type="date"
+                value={date}
+                onChange={(e) =>
+                  setDate(e.target.value)
+                }
+                className="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+
+            </div>
+
+            {/* CATEGORY */}
+
+            <div>
+
+              <label className="block font-medium mb-2">
+                Category
+              </label>
+
+              <select
+                value={category}
+                onChange={(e) =>
+                  setCategory(e.target.value)
+                }
+                className="w-full border rounded-lg px-4 py-3"
+              >
+
+                <option value="">
+                  Select category
+                </option>
+
+                <option value="Food">
+                  Food
+                </option>
+
+                <option value="Travel">
+                  Travel
+                </option>
+
+                <option value="Shopping">
+                  Shopping
+                </option>
+
+                <option value="Entertainment">
+                  Entertainment
+                </option>
+
+                <option value="Bills">
+                  Bills
+                </option>
+
+                <option value="Other">
+                  Other
+                </option>
+
+              </select>
+
+            </div>
+
+            {/* PAID BY */}
+
+            <div>
+
+              <label className="block font-medium mb-2">
+                Paid By
+              </label>
+
+              <select
+                value={paidBy}
+                onChange={(e) =>
+                  setPaidBy(e.target.value)
+                }
+                className="w-full border rounded-lg px-4 py-3"
+              >
+
+                <option value="">
+                  Select payer
+                </option>
+
+                {room.members.map((member) => (
+                  <option
+                    key={member._id}
+                    value={member._id}
+                  >
+                    {member.username}
+                  </option>
+                ))}
+
+              </select>
+
+            </div>
+
+            {/* SPLIT MEMBERS */}
+
+            <div>
+
+              <label className="block font-medium mb-3">
+                Split Between
+              </label>
+
+              <div className="space-y-2">
+
+                {room.members.map((member) => (
+
+                  <label
+                    key={member._id}
+                    className="flex items-center justify-between border rounded-lg p-3 cursor-pointer hover:bg-gray-50"
+                  >
+
+                    <div className="flex items-center gap-3">
+
+                      <input
+                        type="checkbox"
+                        checked={selectedMembers.includes(
+                          member._id
+                        )}
+                        onChange={() =>
+                          toggleMember(
+                            member._id
+                          )
+                        }
+                        className="w-5 h-5"
+                      />
+
+                      <span>
+                        {member.username}
+                      </span>
+
+                    </div>
+
+                  </label>
+
+                ))}
+
+              </div>
+
+            </div>
+
+            {/* SPLIT PREVIEW */}
+
+            {splitPreview.length > 0 && (
+              <div className="bg-indigo-50 rounded-xl p-4">
+
+                <h3 className="font-bold mb-3">
+                  Split Preview
+                </h3>
+
+                <div className="space-y-2">
+
+                  {splitPreview.map((split) => {
+
+                    const member =
+                      room.members.find(
+                        (m) =>
+                          m._id === split.userId
+                      );
+
+                    return (
+                      <div
+                        key={split.userId}
+                        className="flex justify-between"
+                      >
+
+                        <span>
+                          {member?.username}
+                        </span>
+
+                        <strong>
+                          Rs.{" "}
+                          {split.amount.toFixed(
+                            2
+                          )}
+                        </strong>
+
+                      </div>
+                    );
+                  })}
+
+                </div>
+
+                <div className="border-t mt-3 pt-3 flex justify-between font-bold">
+                  <span>Total</span>
+
+                  <span>
+                    Rs.{" "}
+                    {Number(amount || 0).toFixed(
+                      2
+                    )}
+                  </span>
+                </div>
+
+              </div>
+            )}
+
+            {/* SUBMIT */}
+
+            <button
+              type="submit"
+              disabled={expenseLoading}
+              className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {expenseLoading
+                ? "Adding Expense..."
+                : "Add Expense"}
+            </button>
+
+          </form>
+
+        </div>
+
+        {/* ==================================================
+            EXPENSE LIST
+        ================================================== */}
+
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+
+          <div className="mb-6">
+
+            <h2 className="text-xl font-bold">
+              Room Expenses
+            </h2>
+
+            <p className="text-gray-500 text-sm">
+              All expenses created in this room
+            </p>
+
+          </div>
+
+          {expenses.length === 0 ? (
+
+            <div className="text-center py-10 text-gray-500">
+              No expenses found.
+            </div>
+
+          ) : (
+
+            <div className="space-y-5">
+
+              {expenses.map((expense) => (
+
+                <div
+                  key={expense._id}
+                  className="border rounded-xl p-5"
+                >
+
+                  {/* EXPENSE HEADER */}
+
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+
+                    <div>
+
+                      <h3 className="text-lg font-bold">
+                        {expense.title}
+                      </h3>
+
+                      <p className="text-gray-500 text-sm">
+                        {new Date(
+                          expense.date
+                        ).toLocaleDateString()}
+                      </p>
+
+                    </div>
+
+                    <div className="text-xl font-bold text-indigo-600">
+                      Rs.{" "}
+                      {Number(
+                        expense.amount
+                      ).toFixed(2)}
+                    </div>
+
+                  </div>
+
+                  {/* DETAILS */}
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 text-sm">
+
+                    <div className="bg-gray-50 rounded-lg p-3">
+
+                      <span className="text-gray-500">
+                        Category
+                      </span>
+
+                      <p className="font-semibold">
+                        {expense.category}
+                      </p>
+
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-3">
+
+                      <span className="text-gray-500">
+                        Added By
+                      </span>
+
+                      <p className="font-semibold">
+                        {expense.createdBy?.username}
+                      </p>
+
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-3">
+
+                      <span className="text-gray-500">
+                        Paid By
+                      </span>
+
+                      <p className="font-semibold">
+                        {expense.paidBy?.username}
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                  {/* SPLIT */}
+
+                  <div className="mt-5">
+
+                    <h4 className="font-semibold mb-3">
+                      Split Between
+                    </h4>
+
+                    <div className="space-y-2">
+
+                      {expense.splitBetween?.map(
+                        (split) => (
+
+                          <div
+                            key={
+                              split.user?._id
+                            }
+                            className="flex items-center justify-between bg-gray-50 rounded-lg p-3"
+                          >
+
+                            <span>
+                              {split.user
+                                ?.username}
+                            </span>
+
+                            <strong>
+                              Rs.{" "}
+                              {Number(
+                                split.amount
+                              ).toFixed(2)}
+                            </strong>
+
+                          </div>
+
+                        )
+                      )}
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              ))}
+
+            </div>
+
+          )}
+
+        </div>
+
+      </div>
+
+      {/* ====================================================
+          ADD MEMBER MODAL
+      ==================================================== */}
+
+      {showMemberModal && isAdmin && (
+
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+
+          <div className="bg-white rounded-2xl w-full max-w-lg p-6">
+
+            <div className="flex items-center justify-between mb-5">
+
+              <h2 className="text-xl font-bold">
+                Add Member
+              </h2>
+
+              <button
+                onClick={() =>
+                  setShowMemberModal(false)
+                }
+                className="text-gray-500 text-xl"
+              >
+                ✕
+              </button>
+
+            </div>
+
+            {/* SEARCH */}
+
+            <div className="flex gap-2 mb-5">
+
+              <input
+                type="text"
+                value={search}
+                onChange={(e) =>
+                  setSearch(e.target.value)
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSearchUsers();
+                  }
+                }}
+                placeholder="Search username or email"
+                className="flex-1 border rounded-lg px-4 py-3"
+              />
+
+              <button
+                onClick={handleSearchUsers}
+                className="bg-indigo-600 text-white px-4 rounded-lg"
+              >
+                Search
+              </button>
+
+            </div>
+
+            {/* RESULTS */}
+
+            {searchLoading && (
+              <p className="text-gray-500">
+                Searching...
+              </p>
+            )}
+
+            {!searchLoading &&
+              users.length === 0 &&
+              search && (
+                <p className="text-gray-500">
+                  No available users found.
+                </p>
               )}
 
-              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddMember(false);
-                    setMemberEmail("");
-                    setError("");
-                  }}
-                  className="w-full rounded-full px-4 py-2.5 text-sm font-medium transition sm:w-auto"
-                  style={{ border: `1px solid ${tokens.border}`, color: tokens.ink }}
+            <div className="space-y-3 max-h-80 overflow-y-auto">
+
+              {users.map((user) => (
+
+                <div
+                  key={user._id}
+                  className="flex items-center justify-between border rounded-lg p-3"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-white transition sm:w-auto"
-                  style={{ background: tokens.teal }}
-                >
-                  <UserPlus size={15} />
-                  Add
-                </button>
-              </div>
-            </form>
+
+                  <div>
+
+                    <p className="font-semibold">
+                      {user.username}
+                    </p>
+
+                    <p className="text-sm text-gray-500">
+                      {user.email}
+                    </p>
+
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      handleAddMember(
+                        user._id
+                      )
+                    }
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg"
+                  >
+                    Add
+                  </button>
+
+                </div>
+
+              ))}
+
+            </div>
+
           </div>
+
         </div>
+
       )}
+
     </div>
   );
-}
+};
+
+export default Room;

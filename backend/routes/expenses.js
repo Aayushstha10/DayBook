@@ -8,12 +8,14 @@ const getExpenses = require("../controllers/getExpenses");
 const updateExpense = require("../controllers/updateExpense");
 const deleteExpense = require("../controllers/deleteExpense");
 
+// Every route requires a logged-in user.
+router.use(auth);
+
 router.post("/expenses", createExpense);
 router.get("/expenses", getExpenses);
 
-router.put("/expenses/:id", updateExpense);
-router.delete("/expenses/:id", deleteExpense);
-router.put("/expenses/:id", auth, admin, updateExpense);
-router.delete("/expenses/:id", auth, admin, deleteExpense);
+// Only an admin can edit/delete — each route now appears ONCE.
+router.put("/expenses/:id", admin, updateExpense);
+router.delete("/expenses/:id", admin, deleteExpense);
 
 module.exports = router;
