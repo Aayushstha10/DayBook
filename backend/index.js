@@ -9,6 +9,7 @@ const auth = require("./middleware/auth");
 const loginroute = require("./routes/login");
 const signuproute = require("./routes/signup");
 const googleroute = require("./routes/google");
+const expensesroute = require("./routes/expenses");
 const roomRoutes = require("./routes/room");
 
 
@@ -38,7 +39,8 @@ app.use("/api", loginroute);
 app.use("/api", googleroute);
 
 app.use("/api/rooms", roomRoutes);
-
+// Protected expense routes
+app.use("/api", auth, expensesroute);
 
 console.log("URI:", process.env.mongodb);
 

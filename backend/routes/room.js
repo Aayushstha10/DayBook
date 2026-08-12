@@ -5,19 +5,23 @@ const router = express.Router();
 const auth = require("../middleware/auth");
 const admin = require("../middleware/admin");
 
+const createRoom = require("../controllers/createRoom");
 const getRoom = require("../controllers/getRoom");
 const addMember = require("../controllers/addMember");
 const searchUsers = require("../controllers/searchUsers");
 
 router.use(auth);
 
-// Admin only
+// Create room
+router.post("/", createRoom);
+
+// Search users - admin only
 router.get("/users/search", admin, searchUsers);
 
-// Admin only
+// Add member - admin only
 router.post("/:roomId/members", admin, addMember);
 
-// Logged-in room member/admin
+// Get room
 router.get("/:roomId", getRoom);
 
 module.exports = router;

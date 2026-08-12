@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useParams } from "react-router-dom";
 import AddMember from "./AddMember";
 
 const API = "https://daybook-j903.onrender.com/api";
 
-const Room = ({ roomId }) => {
+const Room = () => {
+  const { roomId } = useParams();
+
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const token = localStorage.getItem("token");
 
@@ -16,35 +20,49 @@ const Room = ({ roomId }) => {
 
   const isAdmin = currentUser.role === "admin";
 
-  const fetchRoom = async () => {
-    try {
-      setLoading(true);
-
-      const response = await axios.get(
-        `${API}/rooms/${roomId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      setRoom(response.data.room);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (roomId) {
-      fetchRoom();
-    }
+    const fetchRoom = async () => {
+      try {
+        const response = await axios.get(
+          `${API}/rooms/${roomId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        console.log("ROOM:", response.data);
+
+        setRoom(response.data.room);
+      } catch (error) {
+        console.error(
+          "ROOM ERROR:",
+          error.response?.data || error
+        );
+
+        setError(
+          error.response?.data?.message ||
+            "Unable to load room"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRoom();
   }, [roomId]);
 
   if (loading) {
     return <div className="p-6">Loading room...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-red-500">
+        {error}
+      </div>
+    );
   }
 
   if (!room) {
@@ -54,7 +72,6 @@ const Room = ({ roomId }) => {
   return (
     <div className="mx-auto max-w-4xl p-6">
 
-      {/* HEADER */}
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">
@@ -66,7 +83,6 @@ const Room = ({ roomId }) => {
           </p>
         </div>
 
-        {/* ONLY ADMIN SEES THIS */}
         {isAdmin && (
           <AddMember
             roomId={room._id}
@@ -77,15 +93,13 @@ const Room = ({ roomId }) => {
         )}
       </div>
 
-      {/* MEMBERS */}
-      <div className="rounded-xl border bg-white p-5 shadow-sm">
+      <div className="rounded-xl border bg-white p-5 shadow">
 
         <h2 className="mb-4 text-lg font-semibold">
-          Members ({room.members.length + 1})
+          Members
         </h2>
 
-        {/* ADMIN */}
-        <div className="mb-3 flex items-center justify-between rounded-lg bg-gray-50 p-4">
+        <div className="mb-3 flex justify-between rounded-lg bg-gray-50 p-4">
           <div>
             <p className="font-medium">
               {room.admin.username}
@@ -101,11 +115,10 @@ const Room = ({ roomId }) => {
           </span>
         </div>
 
-        {/* MEMBERS */}
         {room.members.map((member) => (
           <div
             key={member._id}
-            className="mb-3 flex items-center justify-between rounded-lg border p-4"
+            className="mb-3 flex justify-between rounded-lg border p-4"
           >
             <div>
               <p className="font-medium">
