@@ -9,9 +9,8 @@ const auth = require("./middleware/auth");
 const loginroute = require("./routes/login");
 const signuproute = require("./routes/signup");
 const googleroute = require("./routes/google");
-const expensesroute = require("./routes/expenses");
-const roomRoutes = require("./routes/roomRoutes");
 
+const expensesroute = require("./routes/expenses");
 
 
 const app = express();
@@ -38,10 +37,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api", signuproute);
 app.use("/api", loginroute);
 app.use("/api", googleroute);
-app.use("/api", roomRoutes);
-
-
-
 
 // Protected expense routes
 app.use("/api", auth, expensesroute);
