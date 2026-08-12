@@ -465,7 +465,7 @@ const Room = () => {
             <div className="bg-yellow-50 px-4 py-2 rounded-lg">
               👑 Admin:{" "}
               <strong>
-                {room.admin?.username}
+                {room.admin?.name}
               </strong>
             </div>
 
@@ -526,7 +526,7 @@ const Room = () => {
                     <div>
 
                       <p className="font-semibold">
-                        {member.username}
+                        {member.name}
                       </p>
 
                       <p className="text-sm text-gray-500">
@@ -717,7 +717,7 @@ const Room = () => {
                     key={member._id}
                     value={member._id}
                   >
-                    {member.username}
+                    {member.name}
                   </option>
                 ))}
 
@@ -758,7 +758,7 @@ const Room = () => {
                       />
 
                       <span>
-                        {member.username}
+                        {member.name}
                       </span>
 
                     </div>
@@ -797,7 +797,7 @@ const Room = () => {
                       >
 
                         <span>
-                          {member?.username}
+                          {member?.name}
                         </span>
 
                         <strong>
@@ -928,7 +928,7 @@ const Room = () => {
                       </span>
 
                       <p className="font-semibold">
-                        {expense.createdBy?.username}
+                        {expense.createdBy?.name}
                       </p>
 
                     </div>
@@ -940,7 +940,7 @@ const Room = () => {
                       </span>
 
                       <p className="font-semibold">
-                        {expense.paidBy?.username}
+                        {expense.paidBy?.name}
                       </p>
 
                     </div>
@@ -969,7 +969,7 @@ const Room = () => {
 
                             <span>
                               {split.user
-                                ?.username}
+                                ?.name}
                             </span>
 
                             <strong>
@@ -1043,7 +1043,7 @@ const Room = () => {
                     handleSearchUsers();
                   }
                 }}
-                placeholder="Search username or email"
+                placeholder="Search name or email"
                 className="flex-1 border rounded-lg px-4 py-3"
               />
 
@@ -1084,7 +1084,7 @@ const Room = () => {
                   <div>
 
                     <p className="font-semibold">
-                      {user.username}
+                      {user.name}
                     </p>
 
                     <p className="text-sm text-gray-500">

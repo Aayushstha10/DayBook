@@ -26,8 +26,8 @@ const createRoom = async (req, res) => {
     });
 
     const populatedRoom = await Room.findById(room._id)
-      .populate("admin", "username email")
-      .populate("members", "username email");
+      .populate("admin", "name email")
+      .populate("members", "name email");
 
     res.status(201).json({
       success: true,
@@ -56,8 +56,8 @@ const getMyRoom = async (req, res) => {
     const room = await Room.findOne({
       members: userId,
     })
-      .populate("admin", "username email")
-      .populate("members", "username email");
+      .populate("admin", "name email")
+      .populate("members", "name email");
 
     if (!room) {
       return res.status(404).json({
@@ -99,7 +99,7 @@ const searchUsers = async (req, res) => {
     const users = await User.find({
       $or: [
         {
-          username: {
+          name: {
             $regex: search,
             $options: "i",
           },
@@ -112,7 +112,7 @@ const searchUsers = async (req, res) => {
         },
       ],
     })
-      .select("username email")
+      .select("name email")
       .limit(10);
 
     res.status(200).json({
@@ -131,7 +131,7 @@ const searchUsers = async (req, res) => {
 
 // ======================================================
 // ADD MEMBER
-// ADMIN CHECK NOW HANDLED BY isRoomAdmin MIDDLEWARE
+// ADMIN CHECK HANDLED BY isRoomAdmin MIDDLEWARE
 // ======================================================
 
 const addMember = async (req, res) => {
@@ -173,12 +173,12 @@ const addMember = async (req, res) => {
     await room.save();
 
     const updatedRoom = await Room.findById(room._id)
-      .populate("admin", "username email")
-      .populate("members", "username email");
+      .populate("admin", "name email")
+      .populate("members", "name email");
 
     res.status(200).json({
       success: true,
-      message: `${user.username} added to room`,
+      message: `${user.name} added to room`,
       room: updatedRoom,
     });
   } catch (error) {
@@ -194,7 +194,7 @@ const addMember = async (req, res) => {
 
 // ======================================================
 // REMOVE MEMBER
-// ADMIN CHECK NOW HANDLED BY isRoomAdmin MIDDLEWARE
+// ADMIN CHECK HANDLED BY isRoomAdmin MIDDLEWARE
 // (self-removal check for admin still lives here —
 // it's a different concern from "is caller admin")
 // ======================================================
@@ -220,8 +220,8 @@ const removeMember = async (req, res) => {
     await room.save();
 
     const updatedRoom = await Room.findById(room._id)
-      .populate("admin", "username email")
-      .populate("members", "username email");
+      .populate("admin", "name email")
+      .populate("members", "name email");
 
     res.status(200).json({
       success: true,
@@ -407,9 +407,9 @@ const createRoomExpense = async (req, res) => {
     });
 
     const populatedExpense = await RoomExpense.findById(expense._id)
-      .populate("createdBy", "username email")
-      .populate("paidBy", "username email")
-      .populate("splitBetween.user", "username email");
+      .populate("createdBy", "name email")
+      .populate("paidBy", "name email")
+      .populate("splitBetween.user", "name email");
 
     res.status(201).json({
       success: true,
@@ -461,9 +461,9 @@ const getRoomExpenses = async (req, res) => {
     const expenses = await RoomExpense.find({
       room: roomId,
     })
-      .populate("createdBy", "username email")
-      .populate("paidBy", "username email")
-      .populate("splitBetween.user", "username email")
+      .populate("createdBy", "name email")
+      .populate("paidBy", "name email")
+      .populate("splitBetween.user", "name email")
       .sort({
         date: -1,
         createdAt: -1,
