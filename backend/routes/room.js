@@ -5,7 +5,6 @@ const router = express.Router();
 const auth = require("../middleware/auth");
 const admin = require("../middleware/admin");
 
-const createRoom = require("../controllers/createRoom");
 const getRoom = require("../controllers/getMyRoom");
 const addMember = require("../controllers/addMember");
 const searchUsers = require("../controllers/searchUsers");
@@ -21,19 +20,37 @@ const updateRoomExpense =
 
 const deleteRoomExpense =
   require("../controllers/deleteRoomExpense");
+
 router.use(auth);
 
-// ADMIN ONLY
-router.post("/", admin, createRoom);
+// ==========================================
+// ADMIN
+// ==========================================
 
-// ADMIN ONLY
-router.get("/users/search", admin, searchUsers);
+router.get(
+  "/users/search",
+  admin,
+  searchUsers
+);
 
-// ADMIN ONLY
-router.post("/:roomId/members", admin, addMember);
+router.post(
+  "/:roomId/members",
+  admin,
+  addMember
+);
 
-// ADMIN + ROOM MEMBER
-router.get("/:roomId", getRoom);
+// ==========================================
+// ROOM
+// ==========================================
+
+router.get(
+  "/:roomId",
+  getRoom
+);
+
+// ==========================================
+// ROOM EXPENSE
+// ==========================================
 
 // Admin + members
 router.post(
