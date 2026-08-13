@@ -14,7 +14,7 @@ const searchUsers = async (req, res) => {
     const users = await User.find({
       $or: [
         {
-          username: {
+          name: {
             $regex: search,
             $options: "i",
           },
@@ -27,7 +27,7 @@ const searchUsers = async (req, res) => {
         },
       ],
     })
-      .select("_id username email role")
+      .select("_id name email role")
       .limit(10);
 
     res.status(200).json({
