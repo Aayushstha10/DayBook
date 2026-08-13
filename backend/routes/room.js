@@ -6,22 +6,22 @@ const auth = require("../middleware/auth");
 const admin = require("../middleware/admin");
 
 const createRoom = require("../controllers/createRoom");
-const getRoom = require("../controllers/getRoom");
+const getRoom = require("../controllers/getMyRoom");
 const addMember = require("../controllers/addMember");
 const searchUsers = require("../controllers/searchUsers");
 
 router.use(auth);
 
-// Create room
-router.post("/", createRoom);
+// ADMIN ONLY
+router.post("/", admin, createRoom);
 
-// Search users - admin only
+// ADMIN ONLY
 router.get("/users/search", admin, searchUsers);
 
-// Add member - admin only
+// ADMIN ONLY
 router.post("/:roomId/members", admin, addMember);
 
-// Get room
+// ADMIN + ROOM MEMBER
 router.get("/:roomId", getRoom);
 
 module.exports = router;

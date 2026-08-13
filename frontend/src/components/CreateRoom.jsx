@@ -20,38 +20,49 @@ const CreateRoom = () => {
     }
 
     try {
-      setLoading(true);
+      setCreating(true);
       setError("");
-
-      const token = localStorage.getItem("token");
 
       const response = await axios.post(
         `${API}/rooms`,
         {
-          name: roomName,
+          name: roomName.trim(),
         },
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
         }
       );
 
-      console.log("Room created:", response.data);
+      console.log(
+        "CREATE ROOM RESPONSE:",
+        response.data
+      );
 
-      const roomId = response.data.room._id;
+      const createdRoom = response.data.room;
 
-      // Open the newly created room
-      navigate(`/room/${roomId}`);
+      if (!createdRoom?._id) {
+        setError("Backend did not return room ID");
+        return;
+      }
+
+      // IMPORTANT
+      navigate(`/room/${createdRoom._id}`);
+
     } catch (error) {
-      console.error("Create room error:", error);
+      console.error(
+        "CREATE ROOM ERROR:",
+        error.response?.data || error
+      );
 
       setError(
         error.response?.data?.message ||
-          "Failed to create room"
+          "Unable to create room"
       );
     } finally {
-      setLoading(false);
+      setCreating(false);
     }
   };
 

@@ -2,6 +2,15 @@ const Room = require("../models/Room");
 
 const createRoom = async (req, res) => {
   try {
+    const userId = req.user.id || req.user._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User ID not found",
+      });
+    }
+
     const { name } = req.body;
 
     if (!name || !name.trim()) {
@@ -11,9 +20,9 @@ const createRoom = async (req, res) => {
       });
     }
 
-    // Check if user already has a room
+    // Prevent admin from creating multiple rooms
     const existingRoom = await Room.findOne({
-      admin: req.user.id,
+      admin: userId,
     });
 
     if (existingRoom) {
@@ -26,25 +35,26 @@ const createRoom = async (req, res) => {
 
     const room = await Room.create({
       name: name.trim(),
-      admin: req.user.id,
+      admin: userId,
       members: [],
     });
 
     const populatedRoom = await Room.findById(room._id)
-      .populate("admin", "username email role")
-      .populate("members", "username email role");
+      .populate("admin", "username email")
+      .populate("members", "username email");
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Room created successfully",
       room: populatedRoom,
     });
+
   } catch (error) {
     console.error("CREATE ROOM ERROR:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Failed to create room",
+      message: "Server error",
       error: error.message,
     });
   }
