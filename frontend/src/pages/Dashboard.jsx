@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 
 import AddExpense from "../components/AddExpense";
 import Transcation from "../components/Transcation";
+import CreateRoom from "../components/CreateRoom";
 
 export default function Dashboard() {
   const location = useLocation();

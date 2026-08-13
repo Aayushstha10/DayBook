@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
-import AddMember from "./AddMember";
+import AddMember from "../components/AddMember";
 
 const API = "https://daybook-j903.onrender.com/api";
 
 const Room = () => {
   const { roomId } = useParams();
+  console.log("roomid",roomId);
 
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,6 +24,8 @@ const Room = () => {
   useEffect(() => {
     const fetchRoom = async () => {
       try {
+        setLoading(true);
+
         const response = await axios.get(
           `${API}/rooms/${roomId}`,
           {
@@ -32,14 +35,11 @@ const Room = () => {
           }
         );
 
-        console.log("ROOM:", response.data);
+        console.log("Room:", response.data);
 
         setRoom(response.data.room);
       } catch (error) {
-        console.error(
-          "ROOM ERROR:",
-          error.response?.data || error
-        );
+        console.error(error);
 
         setError(
           error.response?.data?.message ||
@@ -54,7 +54,11 @@ const Room = () => {
   }, [roomId]);
 
   if (loading) {
-    return <div className="p-6">Loading room...</div>;
+    return (
+      <div className="p-6">
+        Loading room...
+      </div>
+    );
   }
 
   if (error) {
@@ -66,22 +70,31 @@ const Room = () => {
   }
 
   if (!room) {
-    return <div className="p-6">Room not found</div>;
+    return (
+      <div className="p-6">
+        Room not found
+      </div>
+    );
   }
 
   return (
     <div className="mx-auto max-w-4xl p-6">
 
+      {/* HEADER */}
+
       <div className="mb-6 flex items-center justify-between">
+
         <div>
           <h1 className="text-2xl font-bold">
             {room.name}
           </h1>
 
           <p className="text-gray-500">
-            Room Members
+            Shared Expense Room
           </p>
         </div>
+
+        {/* ONLY ADMIN */}
 
         {isAdmin && (
           <AddMember
@@ -91,17 +104,23 @@ const Room = () => {
             }}
           />
         )}
+
       </div>
 
-      <div className="rounded-xl border bg-white p-5 shadow">
+      {/* MEMBERS */}
 
-        <h2 className="mb-4 text-lg font-semibold">
+      <div className="rounded-xl border bg-white p-6 shadow-sm">
+
+        <h2 className="mb-5 text-xl font-semibold">
           Members
         </h2>
 
-        <div className="mb-3 flex justify-between rounded-lg bg-gray-50 p-4">
+        {/* ADMIN */}
+
+        <div className="mb-3 flex items-center justify-between rounded-lg bg-gray-50 p-4">
+
           <div>
-            <p className="font-medium">
+            <p className="font-semibold">
               {room.admin.username}
             </p>
 
@@ -113,15 +132,19 @@ const Room = () => {
           <span className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-700">
             Admin
           </span>
+
         </div>
+
+        {/* MEMBERS */}
 
         {room.members.map((member) => (
           <div
             key={member._id}
-            className="mb-3 flex justify-between rounded-lg border p-4"
+            className="mb-3 flex items-center justify-between rounded-lg border p-4"
           >
+
             <div>
-              <p className="font-medium">
+              <p className="font-semibold">
                 {member.username}
               </p>
 
@@ -130,13 +153,21 @@ const Room = () => {
               </p>
             </div>
 
-            <span className="text-sm text-gray-500">
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-sm">
               Member
             </span>
+
           </div>
         ))}
 
+        {room.members.length === 0 && (
+          <p className="py-5 text-center text-gray-500">
+            No members yet. Add members above.
+          </p>
+        )}
+
       </div>
+
     </div>
   );
 };
