@@ -10,6 +10,17 @@ const getRoom = require("../controllers/getMyRoom");
 const addMember = require("../controllers/addMember");
 const searchUsers = require("../controllers/searchUsers");
 
+const createRoomExpense =
+  require("../controllers/createRoomExpense");
+
+const getRoomExpenses =
+  require("../controllers/getRoomExpenses");
+
+const updateRoomExpense =
+  require("../controllers/updateRoomExpense");
+
+const deleteRoomExpense =
+  require("../controllers/deleteRoomExpense");
 router.use(auth);
 
 // ADMIN ONLY
@@ -23,5 +34,29 @@ router.post("/:roomId/members", admin, addMember);
 
 // ADMIN + ROOM MEMBER
 router.get("/:roomId", getRoom);
+
+// Admin + members
+router.post(
+  "/:roomId/expenses",
+  createRoomExpense
+);
+
+// Admin + members
+router.get(
+  "/:roomId/expenses",
+  getRoomExpenses
+);
+
+// Admin + creator
+router.put(
+  "/:roomId/expenses/:expenseId",
+  updateRoomExpense
+);
+
+// Admin + creator
+router.delete(
+  "/:roomId/expenses/:expenseId",
+  deleteRoomExpense
+);
 
 module.exports = router;

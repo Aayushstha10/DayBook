@@ -14,10 +14,7 @@ const getMyRoom = async (req, res) => {
     }
 
     const room = await Room.findOne({
-      $or: [
-        { admin: userId },
-        { members: userId },
-      ],
+      $or: [{ admin: userId }, { members: userId }],
     })
       .populate("admin", "username email")
       .populate("members", "username email");
@@ -33,7 +30,6 @@ const getMyRoom = async (req, res) => {
       success: true,
       room,
     });
-
   } catch (error) {
     console.error("GET MY ROOM ERROR:");
     console.error(error);

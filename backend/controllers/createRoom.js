@@ -48,7 +48,6 @@ const createRoom = async (req, res) => {
       message: "Room created successfully",
       room: populatedRoom,
     });
-
   } catch (error) {
     console.error("CREATE ROOM ERROR:", error);
 
