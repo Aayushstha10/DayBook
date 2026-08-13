@@ -9,10 +9,20 @@ const Room = () => {
   const navigate = useNavigate();
 
   const [room, setRoom] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+
   const [roomName, setRoomName] = useState("");
+
+  // Add member states
+  const [search, setSearch] = useState("");
+  const [users, setUsers] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [adding, setAdding] = useState(null);
+
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   const token = localStorage.getItem("token");
 
@@ -22,9 +32,9 @@ const Room = () => {
 
   const isAdmin = currentUser.role === "admin";
 
-  // ==========================================
-  // GET ROOM
-  // ==========================================
+  // =====================================================
+  // LOAD ROOM
+  // =====================================================
 
   useEffect(() => {
     const loadRoom = async () => {
@@ -32,9 +42,9 @@ const Room = () => {
         setLoading(true);
         setError("");
 
-        // ----------------------------------
-        // If already inside a room
-        // ----------------------------------
+        // -----------------------------------------------
+        // Already inside room
+        // -----------------------------------------------
 
         if (roomId) {
           const response = await axios.get(
@@ -51,10 +61,9 @@ const Room = () => {
           return;
         }
 
-        // ----------------------------------
-        // /room
-        // Find user's existing room
-        // ----------------------------------
+        // -----------------------------------------------
+        // Get current user's room
+        // -----------------------------------------------
 
         try {
           const response = await axios.get(
@@ -69,8 +78,6 @@ const Room = () => {
           setRoom(response.data.room);
 
         } catch (error) {
-
-          // 404 means user has no room
           if (error.response?.status === 404) {
             setRoom(null);
           } else {
@@ -97,9 +104,9 @@ const Room = () => {
     loadRoom();
   }, [roomId, token]);
 
-  // ==========================================
+  // =====================================================
   // CREATE ROOM
-  // ==========================================
+  // =====================================================
 
   const handleCreateRoom = async (e) => {
     e.preventDefault();
@@ -138,17 +145,120 @@ const Room = () => {
         error.response?.data?.message ||
           "Unable to create room"
       );
+
     } finally {
       setCreating(false);
     }
   };
 
-  // ==========================================
+  // =====================================================
+  // SEARCH USERS
+  // =====================================================
+
+  const handleSearchUsers = async (e) => {
+    const value = e.target.value;
+
+    setSearch(value);
+    setMessage("");
+
+    if (!value.trim()) {
+      setUsers([]);
+      return;
+    }
+
+    if (!isAdmin) {
+      return;
+    }
+
+    try {
+      setSearching(true);
+
+      const response = await axios.get(
+        `${API}/rooms/users/search?search=${encodeURIComponent(
+          value
+        )}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setUsers(response.data.users || []);
+
+    } catch (error) {
+      console.error(
+        "SEARCH USERS ERROR:",
+        error.response?.data || error
+      );
+
+      setUsers([]);
+
+      setMessage(
+        error.response?.data?.message ||
+          "Unable to search users"
+      );
+
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  // =====================================================
+  // ADD MEMBER
+  // =====================================================
+
+  const handleAddMember = async (userId) => {
+    if (!isAdmin || !roomId) {
+      return;
+    }
+
+    try {
+      setAdding(userId);
+      setMessage("");
+
+      const response = await axios.post(
+        `${API}/rooms/${roomId}/members`,
+        {
+          userId: userId,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Update room immediately
+      setRoom(response.data.room);
+
+      setSearch("");
+      setUsers([]);
+
+      setMessage("Member added successfully");
+
+    } catch (error) {
+      console.error(
+        "ADD MEMBER ERROR:",
+        error.response?.data || error
+      );
+
+      setMessage(
+        error.response?.data?.message ||
+          "Unable to add member"
+      );
+
+    } finally {
+      setAdding(null);
+    }
+  };
+
+  // =====================================================
   // DELETE ROOM
-  // ==========================================
+  // =====================================================
 
   const handleDeleteRoom = async () => {
-    if (!room) return;
+    if (!room || !isAdmin) return;
 
     const confirmed = window.confirm(
       `Delete "${room.name}" permanently?`
@@ -182,9 +292,9 @@ const Room = () => {
     }
   };
 
-  // ==========================================
+  // =====================================================
   // LOADING
-  // ==========================================
+  // =====================================================
 
   if (loading) {
     return (
@@ -194,9 +304,9 @@ const Room = () => {
     );
   }
 
-  // ==========================================
+  // =====================================================
   // ERROR
-  // ==========================================
+  // =====================================================
 
   if (error) {
     return (
@@ -206,9 +316,10 @@ const Room = () => {
     );
   }
 
-  // ==========================================
-  // EXISTING ROOM
-  // ==========================================
+  // =====================================================
+  // EXISTING ROOM CARD
+  // /room
+  // =====================================================
 
   if (room && !roomId) {
     return (
@@ -252,13 +363,13 @@ const Room = () => {
     );
   }
 
-  // ==========================================
+  // =====================================================
   // NO ROOM
-  // ==========================================
+  // =====================================================
 
   if (!room && !roomId) {
 
-    // MEMBER
+    // Normal member
     if (!isAdmin) {
       return (
         <div className="mx-auto max-w-lg p-6">
@@ -279,7 +390,7 @@ const Room = () => {
       );
     }
 
-    // ADMIN
+    // Admin
     return (
       <div className="mx-auto max-w-lg p-6">
 
@@ -322,12 +433,16 @@ const Room = () => {
     );
   }
 
-  // ==========================================
+  // =====================================================
   // ACTUAL ROOM
-  // ==========================================
+  // =====================================================
 
   return (
     <div className="mx-auto max-w-4xl p-6">
+
+      {/* =================================================
+          HEADER
+      ================================================= */}
 
       <div className="mb-6 flex items-center justify-between">
 
@@ -341,30 +456,124 @@ const Room = () => {
           </p>
         </div>
 
+        {/* ADMIN ONLY */}
+
         {isAdmin && (
-          <div className="flex gap-2">
-
-            <button
-              onClick={handleDeleteRoom}
-              className="rounded-lg bg-red-600 px-4 py-2 text-white"
-            >
-              Delete Room
-            </button>
-
-          </div>
+          <button
+            onClick={handleDeleteRoom}
+            className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+          >
+            Delete Room
+          </button>
         )}
 
       </div>
 
-      {/* MEMBERS */}
+      {/* =================================================
+          ADD MEMBER - ADMIN ONLY
+      ================================================= */}
 
-      <div className="rounded-xl border bg-white p-6">
+      {isAdmin && (
+        <div className="mb-6 rounded-xl border bg-white p-6 shadow-sm">
+
+          <h2 className="mb-4 text-xl font-semibold">
+            Add Member
+          </h2>
+
+          <p className="mb-4 text-sm text-gray-500">
+            Search for an existing user and add them
+            to this room.
+          </p>
+
+          <input
+            type="text"
+            value={search}
+            onChange={handleSearchUsers}
+            placeholder="Search username or email..."
+            className="w-full rounded-lg border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+          />
+
+          {/* SEARCHING */}
+
+          {searching && (
+            <p className="mt-3 text-sm text-gray-500">
+              Searching...
+            </p>
+          )}
+
+          {/* USERS */}
+
+          {users.length > 0 && (
+            <div className="mt-3 overflow-hidden rounded-lg border">
+
+              {users.map((user) => (
+                <div
+                  key={user._id}
+                  className="flex items-center justify-between border-b p-4 last:border-b-0"
+                >
+
+                  <div>
+                    <p className="font-semibold">
+                      {user.username}
+                    </p>
+
+                    <p className="text-sm text-gray-500">
+                      {user.email}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      handleAddMember(user._id)
+                    }
+                    disabled={adding === user._id}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {adding === user._id
+                      ? "Adding..."
+                      : "Add"}
+                  </button>
+
+                </div>
+              ))}
+
+            </div>
+          )}
+
+          {/* NO USERS */}
+
+          {search &&
+            !searching &&
+            users.length === 0 && (
+              <p className="mt-3 text-sm text-gray-500">
+                No users found.
+              </p>
+            )}
+
+          {/* MESSAGE */}
+
+          {message && (
+            <p className="mt-3 text-sm text-green-600">
+              {message}
+            </p>
+          )}
+
+        </div>
+      )}
+
+      {/* =================================================
+          MEMBERS
+      ================================================= */}
+
+      <div className="rounded-xl border bg-white p-6 shadow-sm">
 
         <h2 className="mb-5 text-xl font-semibold">
-          Members
+          Members ({(room.members?.length || 0) + 1})
         </h2>
 
-        <div className="mb-3 flex justify-between rounded-lg bg-gray-50 p-4">
+        {/* ADMIN */}
+
+        <div className="mb-3 flex items-center justify-between rounded-lg bg-gray-50 p-4">
 
           <div>
             <p className="font-semibold">
@@ -382,10 +591,12 @@ const Room = () => {
 
         </div>
 
-        {room.members.map((member) => (
+        {/* MEMBERS */}
+
+        {room.members?.map((member) => (
           <div
             key={member._id}
-            className="mb-3 flex justify-between rounded-lg border p-4"
+            className="mb-3 flex items-center justify-between rounded-lg border p-4"
           >
 
             <div>
@@ -404,6 +615,15 @@ const Room = () => {
 
           </div>
         ))}
+
+        {/* NO MEMBERS */}
+
+        {(!room.members ||
+          room.members.length === 0) && (
+          <p className="py-5 text-center text-gray-500">
+            No members yet.
+          </p>
+        )}
 
       </div>
 
