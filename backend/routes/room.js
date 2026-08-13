@@ -8,6 +8,7 @@ const admin = require("../middleware/admin");
 const getRoom = require("../controllers/getMyRoom");
 const addMember = require("../controllers/addMember");
 const searchUsers = require("../controllers/searchUsers");
+const removeMember = require("../controllers/removeMember");
 
 const createRoomExpense =
   require("../controllers/createRoomExpense");
@@ -75,5 +76,9 @@ router.delete(
   "/:roomId/expenses/:expenseId",
   deleteRoomExpense
 );
-
+router.delete(
+  "/:roomId/members/:userId",
+  admin,
+  removeMember
+);
 module.exports = router;

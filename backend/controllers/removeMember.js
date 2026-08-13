@@ -1,10 +1,8 @@
 const Room = require("../models/Room");
-const User = require("../models/User");
 
-const addMember = async (req, res) => {
+const removeMember = async (req, res) => {
   try {
-    const { roomId } = req.params;
-    const { userId } = req.body;
+    const { roomId, userId } = req.params;
 
     if (!userId) {
       return res.status(400).json({
@@ -26,40 +24,32 @@ const addMember = async (req, res) => {
     if (room.admin.toString() !== req.user.id.toString()) {
       return res.status(403).json({
         success: false,
-        message: "Only this room's admin can add members",
+        message: "Only this room's admin can remove members",
       });
     }
 
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    // Check if already member
-    const alreadyMember = room.members.some(
-      (member) => member.toString() === userId.toString()
-    );
-
-    if (alreadyMember) {
-      return res.status(400).json({
-        success: false,
-        message: "User is already a member",
-      });
-    }
-
-    // Don't add admin again
+    // Admin cannot remove themselves via this route
     if (room.admin.toString() === userId.toString()) {
       return res.status(400).json({
         success: false,
-        message: "Admin is already part of the room",
+        message: "Admin cannot be removed from the room",
       });
     }
 
-    room.members.push(userId);
+    const wasMember = room.members.some(
+      (member) => member.toString() === userId.toString()
+    );
+
+    if (!wasMember) {
+      return res.status(400).json({
+        success: false,
+        message: "User is not a member of this room",
+      });
+    }
+
+    room.members = room.members.filter(
+      (member) => member.toString() !== userId.toString()
+    );
 
     await room.save();
 
@@ -69,15 +59,11 @@ const addMember = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Member added successfully",
-      addedMember: {
-        username: user.username,
-        email: user.email,
-      },
+      message: "Member removed successfully",
       room: updatedRoom,
     });
   } catch (error) {
-    console.error("Add member error:", error);
+    console.error("Remove member error:", error);
 
     res.status(500).json({
       success: false,
@@ -86,4 +72,4 @@ const addMember = async (req, res) => {
   }
 };
 
-module.exports = addMember;
+module.exports = removeMember;
