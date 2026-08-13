@@ -189,11 +189,11 @@ const createRoomExpense = async (req, res) => {
       )
         .populate(
           "createdBy",
-          "username email"
+          "name email"
         )
         .populate(
           "splitUsers.user",
-          "username email"
+          "name email"
         );
 
     res.status(201).json({

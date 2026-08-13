@@ -93,7 +93,7 @@ const AddMember = ({ roomId, onMemberAdded }) => {
       setSearch("");
       setUsers([]);
       setMessage(
-        `${response.data.addedMember.username} (${response.data.addedMember.email}) added successfully`
+        `${response.data.addedMember.name} (${response.data.addedMember.email}) added successfully`
       );
 
       setMessage("Member added successfully!");
@@ -141,12 +141,12 @@ const AddMember = ({ roomId, onMemberAdded }) => {
                     user._id
                   )}`}
                 >
-                  {getInitials(user.username)}
+                  {getInitials(user.name)}
                 </div>
 
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-gray-900">
-                    {user.username}
+                    {user.name}
                   </p>
 
                   <p className="truncate text-sm text-gray-500">

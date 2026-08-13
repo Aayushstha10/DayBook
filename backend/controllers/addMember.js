@@ -64,14 +64,14 @@ const addMember = async (req, res) => {
     await room.save();
 
     const updatedRoom = await Room.findById(roomId)
-      .populate("admin", "username email role")
-      .populate("members", "username email role");
+      .populate("admin", "name email role")
+      .populate("members", "name email role");
 
     res.status(200).json({
       success: true,
       message: "Member added successfully",
       addedMember: {
-        username: user.username,
+        username: user.name,
         email: user.email,
       },
       room: updatedRoom,
