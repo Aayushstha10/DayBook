@@ -350,7 +350,7 @@ export default function RoomExpenseForm({
                     <div>
 
                       <p className="font-medium">
-                        {user.username}
+                        {user.name}
                       </p>
 
                       <p className="text-xs text-gray-500">
