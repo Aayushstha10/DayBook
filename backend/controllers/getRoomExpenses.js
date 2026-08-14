@@ -40,11 +40,11 @@ const getRoomExpenses = async (req, res) => {
       })
         .populate(
           "createdBy",
-          "username email"
+          "name email"
         )
         .populate(
           "splitUsers.user",
-          "username email"
+          "name email"
         )
         .sort({
           date: -1,

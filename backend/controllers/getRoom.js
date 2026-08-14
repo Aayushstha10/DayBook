@@ -12,8 +12,8 @@ const getRoom = async (req, res) => {
     }
 
     const room = await Room.findById(roomId)
-      .populate("admin", "username name email")
-      .populate("members", "username name email");
+      .populate("admin", " name email")
+      .populate("members", " name email");
 
     if (!room) {
       return res.status(404).json({
