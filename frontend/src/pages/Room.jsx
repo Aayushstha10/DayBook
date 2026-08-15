@@ -112,22 +112,10 @@ const Room = () => {
 
   const [room, setRoom] = useState(null);
 
-  // NEW: list of every room this admin owns (used only when
-  // there is no roomId in the URL and the user is an admin).
-  // This is what enables multiple rooms without touching the
-  // existing single-room flow used everywhere else.
-  const [myRooms, setMyRooms] = useState([]);
-  const [deletingRoomId, setDeletingRoomId] = useState(null);
-
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
   const [roomName, setRoomName] = useState("");
-
-  // NEW: lets an admin who already has rooms open the
-  // "create another room" form on demand instead of it only
-  // appearing when they have zero rooms.
-  const [showCreateForm, setShowCreateForm] = useState(false);
 
   // =====================================================
   // MEMBER STATES
@@ -292,14 +280,6 @@ const Room = () => {
 
   // =====================================================
   // LOAD ROOM
-  //
-  // - If a roomId is in the URL: load that specific room
-  //   (unchanged for everyone).
-  // - If there's no roomId AND the user is an admin: load
-  //   the FULL LIST of rooms they own (new behavior, enables
-  //   multiple rooms).
-  // - If there's no roomId AND the user is a member: keep the
-  //   original single "my-room" behavior, untouched.
   // =====================================================
 
   useEffect(() => {
@@ -319,33 +299,6 @@ const Room = () => {
           );
 
           setRoom(response.data.room);
-          return;
-        }
-
-        if (isAdmin) {
-          try {
-            const response = await axios.get(
-              `${API}/rooms/my-rooms`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            );
-
-            setMyRooms(
-              Array.isArray(response.data.rooms)
-                ? response.data.rooms
-                : []
-            );
-          } catch (error) {
-            if (error.response?.status === 404) {
-              setMyRooms([]);
-            } else {
-              throw error;
-            }
-          }
-
           return;
         }
 
@@ -383,7 +336,7 @@ const Room = () => {
     };
 
     loadRoom();
-  }, [roomId, token, isAdmin]);
+  }, [roomId, token]);
 
   // =====================================================
   // LOAD EXPENSES
@@ -628,7 +581,7 @@ const Room = () => {
   };
 
   // =====================================================
-  // DELETE ROOM (used from the full room view, unchanged)
+  // DELETE ROOM
   // =====================================================
 
   const handleDeleteRoom = async () => {
@@ -662,50 +615,6 @@ const Room = () => {
         error.response?.data?.message ||
           "Unable to delete room"
       );
-    }
-  };
-
-  // =====================================================
-  // DELETE ROOM FROM THE MULTI-ROOM LIST
-  //
-  // Same behavior as handleDeleteRoom, but operates on a
-  // specific room from the myRooms list instead of the
-  // singular `room` state.
-  // =====================================================
-
-  const handleDeleteRoomFromList = async (roomToDelete) => {
-    if (!isAdmin) return;
-
-    const confirmed = window.confirm(
-      `Delete "${roomToDelete.name}" permanently?`
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setDeletingRoomId(roomToDelete._id);
-
-      await axios.delete(
-        `${API}/rooms/${roomToDelete._id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      setMyRooms((prev) =>
-        prev.filter((r) => r._id !== roomToDelete._id)
-      );
-    } catch (error) {
-      console.error(error);
-
-      alert(
-        error.response?.data?.message ||
-          "Unable to delete room"
-      );
-    } finally {
-      setDeletingRoomId(null);
     }
   };
 
@@ -759,9 +668,7 @@ const Room = () => {
     }
 
     if (!expenseForm.date) {
-      setExpenseError(
-        "Select a date"
-      );
+      setExpenseError("Select a date");
       return;
     }
 
@@ -1051,9 +958,7 @@ const Room = () => {
     }
 
     if (!editForm.date) {
-      setEditError(
-        "Select a date"
-      );
+      setEditError("Select a date");
       return;
     }
 
@@ -1315,139 +1220,7 @@ const Room = () => {
   }
 
   // =====================================================
-  // ADMIN OVERVIEW — NO roomId IN THE URL
-  //
-  // NEW: replaces the old single-room-card / create-form
-  // branching for admins only. Lists every room they own and
-  // always offers a way to create another one. Member
-  // behavior below this block is completely unchanged.
-  // =====================================================
-
-  if (!roomId && isAdmin) {
-    return (
-      <div className="mx-auto max-w-2xl p-4 sm:p-6">
-        <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">
-              Your Rooms
-            </h1>
-
-            <p className="mt-1 text-sm text-gray-500 sm:text-base">
-              {myRooms.length === 0
-                ? "You haven't created any rooms yet."
-                : `You manage ${myRooms.length} room${
-                    myRooms.length === 1 ? "" : "s"
-                  }.`}
-            </p>
-          </div>
-
-          <button
-            onClick={() =>
-              setShowCreateForm((prev) => !prev)
-            }
-            className="w-full shrink-0 rounded-lg bg-indigo-600 px-5 py-3 font-medium text-white transition-colors hover:bg-indigo-700 sm:w-auto"
-          >
-            {showCreateForm ? "Cancel" : "+ New Room"}
-          </button>
-        </div>
-
-        {showCreateForm && (
-          <div className="mb-6 rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
-            <h2 className="mb-2 text-lg font-bold text-gray-900">
-              Create Room
-            </h2>
-
-            <p className="mb-4 text-sm text-gray-500">
-              Create a new room for your members.
-            </p>
-
-            <form onSubmit={handleCreateRoom}>
-              <input
-                value={roomName}
-                onChange={(e) =>
-                  setRoomName(e.target.value)
-                }
-                placeholder="Room name"
-                className="mb-4 w-full rounded-lg border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 sm:text-base"
-              />
-
-              {error && (
-                <p className="mb-3 text-sm text-red-500">
-                  {error}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={creating}
-                className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50 sm:w-auto sm:text-base"
-              >
-                {creating ? "Creating..." : "Create Room"}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {myRooms.length === 0 && !showCreateForm && (
-          <div className="rounded-2xl border border-dashed bg-white p-8 text-center text-sm text-gray-500 sm:text-base">
-            Click "+ New Room" to create your first room.
-          </div>
-        )}
-
-        {myRooms.length > 0 && (
-          <div className="flex flex-col gap-3">
-            {myRooms.map((r) => (
-              <div
-                key={r._id}
-                className="flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-lg font-bold text-gray-900">
-                    {r.name}
-                  </p>
-
-                  <p className="text-xs text-gray-500 sm:text-sm">
-                    {(r.members?.length || 0) + 1} member
-                    {(r.members?.length || 0) + 1 === 1
-                      ? ""
-                      : "s"}
-                  </p>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() =>
-                      navigate(`/room/${r._id}`)
-                    }
-                    className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 sm:flex-none"
-                  >
-                    Enter Room
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      handleDeleteRoomFromList(r)
-                    }
-                    disabled={
-                      deletingRoomId === r._id
-                    }
-                    className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50 sm:flex-none"
-                  >
-                    {deletingRoomId === r._id
-                      ? "Deleting..."
-                      : "Delete"}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // =====================================================
-  // ROOM CARD (member, single room, no roomId) — UNCHANGED
+  // ROOM CARD
   // =====================================================
 
   if (room && !roomId) {
@@ -1471,6 +1244,15 @@ const Room = () => {
             >
               Enter Room
             </button>
+
+            {isAdmin && (
+              <button
+                onClick={handleDeleteRoom}
+                className="w-full rounded-lg bg-red-600 px-5 py-3 font-medium text-white transition-colors hover:bg-red-700 sm:w-auto"
+              >
+                Delete Room
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1478,11 +1260,12 @@ const Room = () => {
   }
 
   // =====================================================
-  // NO ROOM (member, no roomId) — UNCHANGED
+  // NO ROOM
   // =====================================================
 
   if (!room && !roomId) {
-    return (
+    if (!isAdmin) {
+      return (
       <div className="mx-auto max-w-lg px-4 py-8 sm:px-6 sm:py-12">
   <div className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-[0_8px_30px_rgba(0,0,0,0.06)] sm:p-8">
     
@@ -1524,11 +1307,47 @@ const Room = () => {
     </div>
   </div>
 </div>
+      );
+    }
+
+    return (
+      <div className="mx-auto max-w-lg p-4 sm:p-6">
+        <div className="rounded-xl border bg-white p-4 shadow-sm sm:p-6">
+          <h1 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl">
+            Create Room
+          </h1>
+
+          <p className="mb-6 text-sm text-gray-500 sm:text-base">
+            Create a room for your members.
+          </p>
+
+          <form onSubmit={handleCreateRoom}>
+            <input
+              value={roomName}
+              onChange={(e) =>
+                setRoomName(e.target.value)
+              }
+              placeholder="Room name"
+              className="mb-4 w-full rounded-lg border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 sm:text-base"
+            />
+
+            <button
+              type="submit"
+              disabled={creating}
+              className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50 sm:text-base"
+            >
+              {creating
+                ? "Creating..."
+                : "Create Room"}
+            </button>
+          </form>
+        </div>
+      </div>
     );
   }
 
   // =====================================================
-  // ACTUAL ROOM (roomId present) — UNCHANGED
+  // ACTUAL ROOM
   // =====================================================
 
   return (
