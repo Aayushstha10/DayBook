@@ -19,8 +19,15 @@ const CreateRoom = () => {
       return;
     }
 
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setError("Please login first");
+      return;
+    }
+
     try {
-      setCreating(true);
+      setLoading(true);
       setError("");
 
       const response = await axios.post(
@@ -36,10 +43,7 @@ const CreateRoom = () => {
         }
       );
 
-      console.log(
-        "CREATE ROOM RESPONSE:",
-        response.data
-      );
+      console.log("CREATE ROOM RESPONSE:", response.data);
 
       const createdRoom = response.data.room;
 
@@ -48,7 +52,7 @@ const CreateRoom = () => {
         return;
       }
 
-      // IMPORTANT
+      // Go to newly created room
       navigate(`/room/${createdRoom._id}`);
 
     } catch (error) {
@@ -62,7 +66,7 @@ const CreateRoom = () => {
           "Unable to create room"
       );
     } finally {
-      setCreating(false);
+      setLoading(false);
     }
   };
 
@@ -74,7 +78,7 @@ const CreateRoom = () => {
       </h2>
 
       <p className="mb-5 text-sm text-gray-500">
-        Create a room and add members to share expenses.
+        Create multiple rooms and manage members and expenses separately.
       </p>
 
       <form onSubmit={handleCreateRoom}>
@@ -82,9 +86,12 @@ const CreateRoom = () => {
         <input
           type="text"
           value={roomName}
-          onChange={(e) => setRoomName(e.target.value)}
+          onChange={(e) => {
+            setRoomName(e.target.value);
+            setError("");
+          }}
           placeholder="Enter room name"
-          className="mb-3 w-full rounded-lg border px-4 py-3 outline-none focus:ring-2"
+          className="mb-3 w-full rounded-lg border px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
         />
 
         {error && (
@@ -96,7 +103,7 @@ const CreateRoom = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "Creating..." : "Create Room"}
         </button>

@@ -107,6 +107,17 @@ const Room = () => {
   const navigate = useNavigate();
 
   // =====================================================
+  // MULTIPLE ROOMS STATE
+  // =====================================================
+
+  const [allRooms, setAllRooms] = useState([]);
+  const [roomsLoading, setRoomsLoading] = useState(true);
+  const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
+  const [newRoomName, setNewRoomName] = useState("");
+  const [creatingRoom, setCreatingRoom] = useState(false);
+  const [createRoomError, setCreateRoomError] = useState("");
+
+  // =====================================================
   // ROOM STATES
   // =====================================================
 
@@ -237,9 +248,6 @@ const Room = () => {
 
   // =====================================================
   // TOTAL SPENDING BY USER
-  //
-  // This calculates how much each person has personally
-  // added as an expense.
   // =====================================================
 
   const spendingByUser = useMemo(() => {
@@ -277,6 +285,41 @@ const Room = () => {
       0
     );
   }, [expenses]);
+
+  // =====================================================
+  // LOAD ALL ROOMS
+  // =====================================================
+
+  useEffect(() => {
+    const loadAllRooms = async () => {
+      try {
+        setRoomsLoading(true);
+        const response = await axios.get(`${API}/rooms`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        setAllRooms(
+          Array.isArray(response.data.rooms)
+            ? response.data.rooms
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "LOAD ROOMS ERROR:",
+          error.response?.data || error
+        );
+        setAllRooms([]);
+      } finally {
+        setRoomsLoading(false);
+      }
+    };
+
+    if (token) {
+      loadAllRooms();
+    }
+  }, [token]);
 
   // =====================================================
   // LOAD ROOM
@@ -378,9 +421,6 @@ const Room = () => {
 
   // =====================================================
   // DEFAULT SPLIT
-  //
-  // Everyone is selected.
-  // UI toggle is OFF.
   // =====================================================
 
   useEffect(() => {
@@ -394,7 +434,58 @@ const Room = () => {
   }, [room?._id]);
 
   // =====================================================
-  // CREATE ROOM
+  // CREATE ROOM (MODAL)
+  // =====================================================
+
+  const handleCreateRoomModal = async (e) => {
+    e.preventDefault();
+
+    if (!newRoomName.trim()) {
+      setCreateRoomError("Enter room name");
+      return;
+    }
+
+    try {
+      setCreatingRoom(true);
+      setCreateRoomError("");
+
+      const response = await axios.post(
+        `${API}/rooms`,
+        {
+          name: newRoomName.trim(),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const newRoom = response.data.room;
+
+      // Add to rooms list
+      setAllRooms((prev) => [newRoom, ...prev]);
+
+      // Reset and close modal
+      setNewRoomName("");
+      setShowCreateRoomModal(false);
+
+      // Navigate to new room
+      navigate(`/room/${newRoom._id}`);
+    } catch (error) {
+      console.error(error);
+
+      setCreateRoomError(
+        error.response?.data?.message ||
+          "Unable to create room"
+      );
+    } finally {
+      setCreatingRoom(false);
+    }
+  };
+
+  // =====================================================
+  // CREATE ROOM (LEGACY)
   // =====================================================
 
   const handleCreateRoom = async (e) => {
@@ -424,6 +515,9 @@ const Room = () => {
       );
 
       const newRoom = response.data.room;
+
+      // Add to rooms list
+      setAllRooms((prev) => [newRoom, ...prev]);
 
       navigate(`/room/${newRoom._id}`);
     } catch (error) {
@@ -605,9 +699,49 @@ const Room = () => {
 
       alert("Room deleted successfully");
 
+      // Remove from rooms list
+      setAllRooms((prev) =>
+        prev.filter((r) => r._id !== room._id)
+      );
+
       setRoom(null);
 
       navigate("/room");
+    } catch (error) {
+      console.error(error);
+
+      alert(
+        error.response?.data?.message ||
+          "Unable to delete room"
+      );
+    }
+  };
+
+  // =====================================================
+  // DELETE ROOM FROM LIST
+  // =====================================================
+
+  const handleDeleteRoomFromList = async (roomToDelete) => {
+    const confirmed = window.confirm(
+      `Delete "${roomToDelete.name}" permanently?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await axios.delete(
+        `${API}/rooms/${roomToDelete._id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Remove from rooms list
+      setAllRooms((prev) =>
+        prev.filter((r) => r._id !== roomToDelete._id)
+      );
     } catch (error) {
       console.error(error);
 
@@ -1110,9 +1244,6 @@ const Room = () => {
 
   // =====================================================
   // SPLIT LIST
-  //
-  // OFF -> completely hidden
-  // ON  -> show members and switches
   // =====================================================
 
   const renderSplitToggleList = (
@@ -1193,6 +1324,236 @@ const Room = () => {
   };
 
   // =====================================================
+  // LOADING ROOMS
+  // =====================================================
+
+  if (roomsLoading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center p-6 text-sm text-gray-500 sm:text-base">
+        <span className="inline-flex items-center gap-2">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+          Loading rooms...
+        </span>
+      </div>
+    );
+  }
+
+  // =====================================================
+  // SHOW ROOMS LIST (NO ROOMID)
+  // =====================================================
+
+  if (!roomId) {
+    // CREATE ROOM MODAL
+    if (showCreateRoomModal) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl sm:p-8">
+            <h2 className="mb-4 text-xl font-bold text-gray-900 sm:text-2xl">
+              Create New Room
+            </h2>
+
+            <form onSubmit={handleCreateRoomModal} className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Room Name
+                </label>
+                <input
+                  type="text"
+                  value={newRoomName}
+                  onChange={(e) =>
+                    setNewRoomName(e.target.value)
+                  }
+                  placeholder="e.g. Summer Vacation"
+                  className="w-full rounded-lg border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 sm:text-base"
+                  autoFocus
+                />
+              </div>
+
+              {createRoomError && (
+                <p className="text-sm text-red-500">
+                  {createRoomError}
+                </p>
+              )}
+
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                <button
+                  type="submit"
+                  disabled={creatingRoom}
+                  className="flex-1 rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50 sm:text-base"
+                >
+                  {creatingRoom ? "Creating..." : "Create"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateRoomModal(false);
+                    setNewRoomName("");
+                    setCreateRoomError("");
+                  }}
+                  className="flex-1 rounded-lg border px-4 py-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 sm:text-base"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // ROOMS LIST VIEW
+    return (
+      <div className="mx-auto max-w-5xl p-3 sm:p-6">
+        {/* HEADER */}
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+              Your Rooms
+            </h1>
+            <p className="mt-1 text-sm text-gray-500 sm:text-base">
+              Manage shared expenses across multiple rooms
+            </p>
+          </div>
+
+          {isAdmin && (
+            <button
+              onClick={() => setShowCreateRoomModal(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-indigo-700 sm:text-base"
+            >
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              New Room
+            </button>
+          )}
+        </div>
+
+        {/* ROOMS GRID */}
+        {allRooms.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {allRooms.map((r) => {
+              const memberCount = (r.members?.length || 0) + 1;
+
+              return (
+                <div
+                  key={r._id}
+                  className="group overflow-hidden rounded-xl border bg-white transition-all hover:shadow-md"
+                >
+                  {/* HEADER */}
+                  <div className="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-4 text-white">
+                    <h3 className="truncate text-lg font-bold">
+                      {r.name}
+                    </h3>
+                    <p className="text-sm text-white/80">
+                      {memberCount} member
+                      {memberCount === 1 ? "" : "s"}
+                    </p>
+                  </div>
+
+                  {/* ACTIONS */}
+                  <div className="space-y-2 p-4">
+                    <button
+                      onClick={() =>
+                        navigate(`/room/${r._id}`)
+                      }
+                      className="w-full rounded-lg bg-indigo-50 px-4 py-2.5 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100"
+                    >
+                      Enter Room
+                    </button>
+
+                    {isAdmin && (
+                      <button
+                        onClick={() =>
+                          handleDeleteRoomFromList(r)
+                        }
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-100 sm:text-sm"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed bg-gray-50 p-12 text-center">
+            <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+              <svg
+                className="h-6 w-6 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m0 0h6m0 0h-6m0-6H6"
+                />
+              </svg>
+            </div>
+
+            <p className="mb-4 text-sm text-gray-600 sm:text-base">
+              {isAdmin
+                ? "No rooms yet. Create one to get started."
+                : "No rooms found. Contact admin to join a room."}
+            </p>
+
+            {isAdmin && (
+              <button
+                onClick={() =>
+                  setShowCreateRoomModal(true)
+                }
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                Create First Room
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // =====================================================
   // LOADING
   // =====================================================
 
@@ -1213,134 +1574,18 @@ const Room = () => {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-2xl p-4 text-center text-sm text-red-500 sm:p-6 sm:text-base">
-        {error}
-      </div>
-    );
-  }
-
-  // =====================================================
-  // ROOM CARD
-  // =====================================================
-
-  if (room && !roomId) {
-    return (
       <div className="mx-auto max-w-2xl p-4 sm:p-6">
-        <div className="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
-          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">
-            {room.name}
-          </h1>
-
-          <p className="mt-2 text-sm text-gray-500 sm:text-base">
-            Your shared expense room
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+          <p className="text-sm text-red-700 sm:text-base">
+            {error}
           </p>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <button
-              onClick={() =>
-                navigate(`/room/${room._id}`)
-              }
-              className="w-full rounded-lg bg-indigo-600 px-5 py-3 font-medium text-white transition-colors hover:bg-indigo-700 sm:w-auto"
-            >
-              Enter Room
-            </button>
-
-            {isAdmin && (
-              <button
-                onClick={handleDeleteRoom}
-                className="w-full rounded-lg bg-red-600 px-5 py-3 font-medium text-white transition-colors hover:bg-red-700 sm:w-auto"
-              >
-                Delete Room
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // =====================================================
-  // NO ROOM
-  // =====================================================
-
-  if (!room && !roomId) {
-    if (!isAdmin) {
-      return (
-      <div className="mx-auto max-w-lg px-4 py-8 sm:px-6 sm:py-12">
-  <div className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-[0_8px_30px_rgba(0,0,0,0.06)] sm:p-8">
-    
-    {/* Decorative background */}
-    <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-indigo-50" />
-    <div className="absolute -bottom-10 -left-10 h-24 w-24 rounded-full bg-indigo-50" />
-
-    {/* Icon */}
-    <div className="relative mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 shadow-sm">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="h-8 w-8"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1.8}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 16.5v-9z"
-        />
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M3 9h18"
-        />
-      </svg>
-    </div>
-
-    <div className="relative">
-      <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
-        No Room Found
-      </h1>
-
-      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-gray-500 sm:text-base">
-        You are not a member of any room yet.
-      </p>
-    </div>
-  </div>
-</div>
-      );
-    }
-
-    return (
-      <div className="mx-auto max-w-lg p-4 sm:p-6">
-        <div className="rounded-xl border bg-white p-4 shadow-sm sm:p-6">
-          <h1 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl">
-            Create Room
-          </h1>
-
-          <p className="mb-6 text-sm text-gray-500 sm:text-base">
-            Create a room for your members.
-          </p>
-
-          <form onSubmit={handleCreateRoom}>
-            <input
-              value={roomName}
-              onChange={(e) =>
-                setRoomName(e.target.value)
-              }
-              placeholder="Room name"
-              className="mb-4 w-full rounded-lg border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 sm:text-base"
-            />
-
-            <button
-              type="submit"
-              disabled={creating}
-              className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50 sm:text-base"
-            >
-              {creating
-                ? "Creating..."
-                : "Create Room"}
-            </button>
-          </form>
+          <button
+            onClick={() => navigate("/room")}
+            className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+          >
+            Back to Rooms
+          </button>
         </div>
       </div>
     );
@@ -1353,14 +1598,33 @@ const Room = () => {
   return (
     <div className="mx-auto max-w-4xl p-3 sm:p-6">
 
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
+      {/* BREADCRUMB */}
+      <button
+        onClick={() => navigate("/room")}
+        className="mb-6 inline-flex items-center gap-2 text-sm text-indigo-600 transition-colors hover:text-indigo-700"
+      >
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+        Back to Rooms
+      </button>
+
+      {/* HEADER */}
 
       <div className="mb-4 flex flex-col gap-1 rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 p-5 text-white shadow-md sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div className="min-w-0">
           <h1 className="truncate text-xl font-bold sm:text-3xl">
-            {room.name}
+            {room?.name}
           </h1>
 
           <p className="text-xs text-indigo-100 sm:text-base">
@@ -1379,9 +1643,7 @@ const Room = () => {
         )}
       </div>
 
-      {/* =====================================================
-          ADD MEMBER
-      ===================================================== */}
+      {/* ADD MEMBER */}
 
       {isAdmin && (
         <div className="mb-4 rounded-2xl border bg-white p-4 shadow-sm sm:mb-6 sm:p-6">
@@ -1468,9 +1730,7 @@ const Room = () => {
         </div>
       )}
 
-      {/* =====================================================
-          MEMBERS
-      ===================================================== */}
+      {/* MEMBERS */}
 
       <div className="mb-4 rounded-2xl border bg-white p-4 shadow-sm sm:mb-6 sm:p-6">
         <h2 className="mb-5 text-base font-semibold text-gray-900 sm:text-xl">
@@ -1485,23 +1745,23 @@ const Room = () => {
             <div className="flex min-w-0 items-center gap-3">
               <div
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${getAvatarColor(
-                  room.admin?._id
+                  room?.admin?._id
                 )}`}
               >
                 {getInitials(
-                  room.admin?.name ||
-                    room.admin?.username
+                  room?.admin?.name ||
+                    room?.admin?.username
                 )}
               </div>
 
               <div className="min-w-0">
                 <p className="truncate font-semibold text-gray-900">
-                  {room.admin?.name ||
-                    room.admin?.username}
+                  {room?.admin?.name ||
+                    room?.admin?.username}
                 </p>
 
                 <p className="truncate text-xs text-gray-500">
-                  {room.admin?.email}
+                  {room?.admin?.email}
                 </p>
               </div>
             </div>
@@ -1513,7 +1773,7 @@ const Room = () => {
 
           {/* MEMBERS */}
 
-          {room.members?.map((member) => (
+          {room?.members?.map((member) => (
             <div
               key={member._id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 sm:p-4"
@@ -1571,17 +1831,15 @@ const Room = () => {
           ))}
         </div>
 
-        {(!room.members ||
-          room.members.length === 0) && (
+        {(!room?.members ||
+          room?.members.length === 0) && (
           <p className="py-8 text-center text-sm text-gray-500 sm:text-base">
             No members yet.
           </p>
         )}
       </div>
 
-      {/* =====================================================
-          TOTAL SPENT
-      ===================================================== */}
+      {/* TOTAL SPENT */}
 
       <div className="mb-4 rounded-2xl border bg-white p-4 shadow-sm sm:mb-6 sm:p-6">
 
@@ -1664,9 +1922,7 @@ const Room = () => {
         </div>
       </div>
 
-      {/* =====================================================
-          EXPENSES
-      ===================================================== */}
+      {/* EXPENSES */}
 
       <div className="mb-4 rounded-2xl border bg-white p-4 shadow-sm sm:mb-6 sm:p-6">
 
@@ -1877,9 +2133,7 @@ const Room = () => {
                     )}
                   </>
                 ) : (
-                  /* =================================================
-                     EDIT FORM
-                  ================================================= */
+                  /* EDIT FORM */
 
                   <form
                     onSubmit={(e) =>
@@ -2064,9 +2318,7 @@ const Room = () => {
           })}
       </div>
 
-      {/* =====================================================
-          ADD EXPENSE
-      ===================================================== */}
+      {/* ADD EXPENSE */}
 
       <div className="mb-4 rounded-2xl border bg-white p-4 shadow-sm sm:mb-6 sm:p-6">
 
@@ -2164,9 +2416,7 @@ const Room = () => {
             </div>
           </div>
 
-          {/* =================================================
-              SPLIT WITH
-          ================================================= */}
+          {/* SPLIT WITH */}
 
           <div className="mt-5">
 
@@ -2181,8 +2431,6 @@ const Room = () => {
                   Turn on to choose members
                 </p>
               </div>
-
-              {/* MAIN SPLIT TOGGLE */}
 
               <button
                 type="button"
@@ -2211,8 +2459,6 @@ const Room = () => {
               </button>
             </div>
 
-            {/* MEMBER LIST ONLY WHEN ON */}
-
             {renderSplitToggleList(
               splitWith,
               toggleSplitMember,
@@ -2220,9 +2466,7 @@ const Room = () => {
             )}
           </div>
 
-          {/* =================================================
-              SPLIT PREVIEW
-          ================================================= */}
+          {/* SPLIT PREVIEW */}
 
           {previewSplit && (
             <p className="mt-3 text-xs text-gray-600 sm:text-sm">
