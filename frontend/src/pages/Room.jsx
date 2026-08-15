@@ -1602,7 +1602,7 @@ const Room = () => {
             </p>
 
             <p className="text-lg font-bold text-emerald-700">
-              ${totalRoomSpending.toFixed(2)}
+              रु {totalRoomSpending.toFixed(2)}
             </p>
           </div>
         </div>
@@ -1651,7 +1651,7 @@ const Room = () => {
 
                 <div className="ml-3 shrink-0 text-right">
                   <p className="text-base font-bold text-emerald-600 sm:text-lg">
-                    ${total.toFixed(2)}
+                    रु {total.toFixed(2)}
                   </p>
 
                   <p className="text-[10px] text-gray-500 sm:text-xs">
@@ -1756,7 +1756,7 @@ const Room = () => {
                       <div className="text-left sm:text-right">
 
                         <p className="text-sm font-semibold text-gray-900 sm:text-base">
-                          $
+                          रु
                           {Number(
                             expense.amount
                           ).toFixed(2)}
@@ -1828,7 +1828,7 @@ const Room = () => {
                                 </span>
 
                                 <span className="shrink-0 font-semibold text-indigo-600">
-                                  $
+                                  रु
                                   {Number(
                                     s.amount
                                   ).toFixed(2)}
@@ -2228,7 +2228,7 @@ const Room = () => {
             <p className="mt-3 text-xs text-gray-600 sm:text-sm">
               Split:{" "}
               <span className="font-semibold text-indigo-600">
-                ${previewSplit}
+                रु {previewSplit}
               </span>{" "}
               per person among{" "}
               {splitWith.length} selected
