@@ -41,7 +41,7 @@ const addMember = async (req, res) => {
 
     // Check if already member
     const alreadyMember = room.members.some(
-      (member) => member.toString() === userId.toString()
+      (member) => member.toString() === userId.toString(),
     );
 
     if (alreadyMember) {

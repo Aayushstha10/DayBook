@@ -12,7 +12,6 @@ const createRoom = async (req, res) => {
     }
 
     const { name } = req.body;
-
     if (!name || !name.trim()) {
       return res.status(400).json({
         success: false,
@@ -50,7 +49,6 @@ const createRoom = async (req, res) => {
     });
   } catch (error) {
     console.error("CREATE ROOM ERROR:", error);
-
     return res.status(500).json({
       success: false,
       message: "Server error",
