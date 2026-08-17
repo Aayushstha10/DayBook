@@ -1,7 +1,10 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+
 import MainLayout from "./layout/MainLayout.jsx";
 import ProtectedRoute from "./pages/ProtectedRoute.jsx";
+import PublicRoute from "./pages/PublicRoute.jsx";
+
 const Login = lazy(() => import("./pages/Login.jsx"));
 const Register = lazy(() => import("./pages/Register.jsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
@@ -27,23 +30,33 @@ export default function App() {
     <Suspense fallback={<PageLoader />}>
       <Routes>
 
-        {/* Public */}
+        {/* ================= PUBLIC ================= */}
+
         <Route
           path="/"
-          element={<Navigate to="/login" replace />}
+          element={<Navigate to="/dashboard" replace />}
         />
 
         <Route
           path="/login"
-          element={<Login />}
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          }
         />
 
         <Route
           path="/register"
-          element={<Register />}
+          element={
+            <PublicRoute>
+              <Register />
+            </PublicRoute>
+          }
         />
 
-        {/* Protected */}
+        {/* ================= PROTECTED ================= */}
+
         <Route
           element={
             <ProtectedRoute>
@@ -51,7 +64,6 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-
           <Route
             path="/dashboard"
             element={<Dashboard />}
@@ -67,7 +79,6 @@ export default function App() {
             element={<Profile />}
           />
 
-          {/* ROOM */}
           <Route
             path="/room"
             element={<Room />}
@@ -82,10 +93,10 @@ export default function App() {
             path="/settings"
             element={<Settings />}
           />
-
         </Route>
 
-        {/* 404 */}
+        {/* ================= 404 ================= */}
+
         <Route
           path="*"
           element={<NotFound />}
