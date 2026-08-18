@@ -79,13 +79,6 @@ Make sure you have the following installed:
 * npm
 * MongoDB or a MongoDB Atlas account
 
-### Clone the repository
-
-```bash
-git clone <your-repository-url>
-cd Daybook
-```
-
 ### Backend setup
 
 ```bash
