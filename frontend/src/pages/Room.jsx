@@ -1663,6 +1663,198 @@ const Room = () => {
           })}
         </div>
       </div>
+            {/* =====================================================
+          ADD EXPENSE
+      ===================================================== */}
+
+      <div className="mb-4 rounded-2xl border bg-white p-4 shadow-sm sm:mb-6 sm:p-6">
+
+        <h2 className="mb-4 text-base font-semibold text-gray-900 sm:text-xl">
+          Add Expense
+        </h2>
+
+        <form onSubmit={handleAddExpense}>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+            {/* TITLE */}
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Title
+              </label>
+
+              <input
+                type="text"
+                value={expenseForm.title}
+                onChange={handleExpenseFieldChange(
+                  "title"
+                )}
+                placeholder="e.g. Groceries"
+                className="w-full rounded-lg border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 sm:text-base"
+              />
+            </div>
+
+            {/* AMOUNT */}
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Amount
+              </label>
+
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={expenseForm.amount}
+                onChange={handleExpenseFieldChange(
+                  "amount"
+                )}
+                placeholder="0.00"
+                className="w-full rounded-lg border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 sm:text-base"
+              />
+            </div>
+
+            {/* CATEGORY */}
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Category
+              </label>
+
+              <select
+                value={expenseForm.category}
+                onChange={handleExpenseFieldChange(
+                  "category"
+                )}
+                className="w-full rounded-lg border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 sm:text-base"
+              >
+                {EXPENSE_CATEGORIES.map(
+                  (category) => (
+                    <option
+                      key={category}
+                      value={category}
+                    >
+                      {category}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+
+            {/* DATE */}
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Date
+              </label>
+
+              <input
+                type="date"
+                value={toInputDate(
+                  expenseForm.date
+                )}
+                max={TODAY}
+                onChange={handleExpenseFieldChange(
+                  "date"
+                )}
+                className="w-full rounded-lg border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 sm:text-base"
+              />
+            </div>
+          </div>
+
+          {/* =================================================
+              SPLIT WITH
+          ================================================= */}
+
+          <div className="mt-5">
+
+            <div className="mb-3 flex items-center justify-between">
+
+              <div>
+                <p className="text-sm font-medium text-gray-700">
+                  Split with
+                </p>
+
+                <p className="text-xs text-gray-500">
+                  Turn on to choose members
+                </p>
+              </div>
+
+              {/* MAIN SPLIT TOGGLE */}
+
+              <button
+                type="button"
+                role="switch"
+                aria-checked={
+                  showSplitToggle
+                }
+                onClick={() =>
+                  setShowSplitToggle(
+                    (prev) => !prev
+                  )
+                }
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
+                  showSplitToggle
+                    ? "bg-indigo-600"
+                    : "bg-gray-300"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    showSplitToggle
+                      ? "translate-x-6"
+                      : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* MEMBER LIST ONLY WHEN ON */}
+
+            {renderSplitToggleList(
+              splitWith,
+              toggleSplitMember,
+              showSplitToggle
+            )}
+          </div>
+
+          {/* =================================================
+              SPLIT PREVIEW
+          ================================================= */}
+
+          {previewSplit && (
+            <p className="mt-3 text-xs text-gray-600 sm:text-sm">
+              Split:{" "}
+              <span className="font-semibold text-indigo-600">
+                रु {previewSplit}
+              </span>{" "}
+              per person among{" "}
+              {splitWith.length} selected
+            </p>
+          )}
+
+          {/* ERROR */}
+
+          {expenseError && (
+            <p className="mt-3 text-xs text-red-500 sm:text-sm">
+              {expenseError}
+            </p>
+          )}
+
+          {/* ADD BUTTON */}
+
+          <button
+            type="submit"
+            disabled={submittingExpense}
+            className="mt-4 w-full rounded-lg bg-indigo-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50 sm:w-auto sm:text-base"
+          >
+            {submittingExpense
+              ? "Adding..."
+              : "Add Expense"}
+          </button>
+        </form>
+      </div>
 
       {/* =====================================================
           EXPENSES
@@ -2062,199 +2254,6 @@ const Room = () => {
               </div>
             );
           })}
-      </div>
-
-      {/* =====================================================
-          ADD EXPENSE
-      ===================================================== */}
-
-      <div className="mb-4 rounded-2xl border bg-white p-4 shadow-sm sm:mb-6 sm:p-6">
-
-        <h2 className="mb-4 text-base font-semibold text-gray-900 sm:text-xl">
-          Add Expense
-        </h2>
-
-        <form onSubmit={handleAddExpense}>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-
-            {/* TITLE */}
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Title
-              </label>
-
-              <input
-                type="text"
-                value={expenseForm.title}
-                onChange={handleExpenseFieldChange(
-                  "title"
-                )}
-                placeholder="e.g. Groceries"
-                className="w-full rounded-lg border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 sm:text-base"
-              />
-            </div>
-
-            {/* AMOUNT */}
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Amount
-              </label>
-
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={expenseForm.amount}
-                onChange={handleExpenseFieldChange(
-                  "amount"
-                )}
-                placeholder="0.00"
-                className="w-full rounded-lg border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 sm:text-base"
-              />
-            </div>
-
-            {/* CATEGORY */}
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Category
-              </label>
-
-              <select
-                value={expenseForm.category}
-                onChange={handleExpenseFieldChange(
-                  "category"
-                )}
-                className="w-full rounded-lg border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 sm:text-base"
-              >
-                {EXPENSE_CATEGORIES.map(
-                  (category) => (
-                    <option
-                      key={category}
-                      value={category}
-                    >
-                      {category}
-                    </option>
-                  )
-                )}
-              </select>
-            </div>
-
-            {/* DATE */}
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Date
-              </label>
-
-              <input
-                type="date"
-                value={toInputDate(
-                  expenseForm.date
-                )}
-                max={TODAY}
-                onChange={handleExpenseFieldChange(
-                  "date"
-                )}
-                className="w-full rounded-lg border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 sm:text-base"
-              />
-            </div>
-          </div>
-
-          {/* =================================================
-              SPLIT WITH
-          ================================================= */}
-
-          <div className="mt-5">
-
-            <div className="mb-3 flex items-center justify-between">
-
-              <div>
-                <p className="text-sm font-medium text-gray-700">
-                  Split with
-                </p>
-
-                <p className="text-xs text-gray-500">
-                  Turn on to choose members
-                </p>
-              </div>
-
-              {/* MAIN SPLIT TOGGLE */}
-
-              <button
-                type="button"
-                role="switch"
-                aria-checked={
-                  showSplitToggle
-                }
-                onClick={() =>
-                  setShowSplitToggle(
-                    (prev) => !prev
-                  )
-                }
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
-                  showSplitToggle
-                    ? "bg-indigo-600"
-                    : "bg-gray-300"
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                    showSplitToggle
-                      ? "translate-x-6"
-                      : "translate-x-1"
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* MEMBER LIST ONLY WHEN ON */}
-
-            {renderSplitToggleList(
-              splitWith,
-              toggleSplitMember,
-              showSplitToggle
-            )}
-          </div>
-
-          {/* =================================================
-              SPLIT PREVIEW
-          ================================================= */}
-
-          {previewSplit && (
-            <p className="mt-3 text-xs text-gray-600 sm:text-sm">
-              Split:{" "}
-              <span className="font-semibold text-indigo-600">
-                रु {previewSplit}
-              </span>{" "}
-              per person among{" "}
-              {splitWith.length} selected
-            </p>
-          )}
-
-          {/* ERROR */}
-
-          {expenseError && (
-            <p className="mt-3 text-xs text-red-500 sm:text-sm">
-              {expenseError}
-            </p>
-          )}
-
-          {/* ADD BUTTON */}
-
-          <button
-            type="submit"
-            disabled={submittingExpense}
-            className="mt-4 w-full rounded-lg bg-indigo-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50 sm:w-auto sm:text-base"
-          >
-            {submittingExpense
-              ? "Adding..."
-              : "Add Expense"}
-          </button>
-        </form>
       </div>
     </div>
   );
